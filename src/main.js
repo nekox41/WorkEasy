@@ -1,27 +1,22 @@
 // main.js
 import { createApp } from 'vue'
 import App from './App.vue'
-import Image from './components/Image.vue'
+import ElementPlus from 'element-plus'
+import 'element-plus/dist/index.css'
+import jQuery from 'jquery';
 
-// 创建一个函数来检查目标元素是否存在并获取href
-function checkTargetElement() {
-  const targetElement = document.querySelector('#taskAudit > div:nth-child(1) > table > tbody > tr > td:nth-child(11) > a')
-  if (targetElement) {
-    return targetElement.href
-  }
-  return null
-}
+const app = createApp(App);
 
-// 创建Vue应用并传入href数据
-const imageHref = checkTargetElement()
-const app = createApp(App, {
-  imageHref: imageHref
-})
+// 使用ElementPlus
+app.use(ElementPlus);
 
-// 全局注册Image组件
-app.component('Image', Image)
+// 添加 jQuery 到全局
+app.config.globalProperties.$ = jQuery;
 
-// 创建并挂载应用
-const mountPoint = document.createElement('div')
-document.body.appendChild(mountPoint)
-app.mount(mountPoint)
+// 创建 div
+const div = document.createElement('div');
+div.id = 'app';
+document.body.appendChild(div);
+
+// 挂载
+app.mount('#app');
