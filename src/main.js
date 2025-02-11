@@ -4,6 +4,10 @@ import App from './App.vue'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 import jQuery from 'jquery';
+import { checkUpdate } from './api/update';
+
+
+checkUpdate();
 
 const app = createApp(App);
 

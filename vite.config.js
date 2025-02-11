@@ -12,6 +12,10 @@ export default defineConfig({
         icon: 'https://vitejs.dev/logo.svg',
         namespace: 'npm/vite-plugin-monkey',
         match: ['*://*.xmf119.cn/*'],
+        connect: ['gitee.com'],
+        noframes: true,
+        description: '',
+        version: '1.1',
       },
       build: {
         externalGlobals: {

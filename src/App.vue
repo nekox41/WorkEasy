@@ -8,7 +8,6 @@ import TaskInfo from './components/TaskInfo.vue';
 import Detail from './components/Detail.vue';
 import Index from './components/Index.vue';
 
-
 const currentModule = ref('None');
 const modules = {
   TaskInfo,
@@ -17,6 +16,7 @@ const modules = {
 };
 
 onMounted(() => {
+
   const url = window.location.href;
 
   if (url.includes('taskInfo')) {
@@ -27,6 +27,7 @@ onMounted(() => {
     currentModule.value = 'Index';
   }
 });
+
 </script>
 
 <style>
