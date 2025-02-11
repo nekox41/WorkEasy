@@ -1,9 +1,16 @@
 import axios from 'axios';
 
+export function getBaseUrl() {
+  const url = window.location.href;
+  return new URL(url).origin;
+}
+
+const baseUrl = getBaseUrl();
+
 // 查询项目
 export async function queryProject(projectName) {
   try {
-    const response = await axios.get(`https://www.xmf119.cn/admin/contract/index.html?page=1&key=${projectName}`);
+    const response = await axios.get(`${baseUrl}/admin/contract/index.html?page=1&key=${projectName}`);
     return response.data;
   } catch (error) {
     throw new Error('获取项目数据失败');
@@ -14,7 +21,7 @@ export async function queryProject(projectName) {
 export async function queryProjectBuilding(projectId){
   const result = [];
   try {
-    const response = await axios.get(`https://www.xmf119.cn/admin/contract/building.html?id=${projectId}`);
+    const response = await axios.get(`${baseUrl}/admin/contract/building.html?id=${projectId}`);
     $(response.data).find(".long-td").each( function() {
       result.push({
         buildingId: this.children[0].innerText,
@@ -37,7 +44,7 @@ export async function queryProjectBuilding(projectId){
 
 export async function queryBuildingWater(buildingId){
   try {
-    const response = await axios.get(`https://www.xmf119.cn/admin/contract/getwaterfacility.html?id=${buildingId}`);
+    const response = await axios.get(`${baseUrl}/admin/contract/getwaterfacility.html?id=${buildingId}`);
     if(response.data.data.is_water_facility === -1){
       return [];
     }
@@ -59,4 +66,40 @@ export async function queryImage(url) {
     throw new Error('获取图片失败');
   }
   return result;
+}
+
+// 查询到期合同
+export async function queryExpiredContract(formattedDate) {
+  const baseUrl = `${getBaseUrl()}/admin/contract/index.html`;
+  let allContracts = [];
+
+  try {
+    // 获取第一页数据以确定总页数
+    const firstPageResponse = await axios.get(baseUrl, {
+      params: {
+        page: 1,
+        end: formattedDate,
+        sign_end_end: formattedDate,
+      }
+    });
+
+    const totalPages = firstPageResponse.data.all_page;
+    allContracts = [...firstPageResponse.data.list];
+
+    // 获取剩余页数的数据
+    for (let page = 2; page <= totalPages; page++) {
+      const response = await axios.get(baseUrl, {
+        params: {
+          page,
+          end: formattedDate,
+          sign_end_end: formattedDate,
+        }
+      });
+      allContracts = [...allContracts, ...response.data.list];
+    }
+
+    return allContracts;
+  } catch (error) {
+    throw new Error('获取到期合同数据失败');
+  }
 }

@@ -11,7 +11,7 @@ export default defineConfig({
       userscript: {
         icon: 'https://vitejs.dev/logo.svg',
         namespace: 'npm/vite-plugin-monkey',
-        match: ['https://www.xmf119.cn/*'],
+        match: ['*://*.xmf119.cn/*'],
       },
       build: {
         externalGlobals: {

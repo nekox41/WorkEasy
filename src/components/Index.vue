@@ -40,8 +40,9 @@
 
 <script setup>
 import { ElDrawer, ElNotification, ElTable, ElTableColumn, ElButton, ElMessage, ElTag } from 'element-plus';
-import { onMounted, ref, h } from 'vue';
-import axios from 'axios';
+import { onMounted, ref } from 'vue';
+import { queryExpiredContract } from '../api/query';
+
 
 const noti = ref(null);
 const currentIframe = ref(null);
@@ -71,26 +72,6 @@ onMounted(() => {
     checkExpiredContract();
 })
 
-function checkIframe() {
-    const iframe = $('.J_iframe').filter(function () {
-        return $(this).css('display') !== 'none';
-    });
-    
-    // 检查 iframe 是否存在且有 src 属性
-    const src = iframe.attr('src');
-    if (!src) return;
-    
-    if (src.includes('contract')) {
-        if (noti.value !== null) {
-            return;
-        }
-        noti.value = ElNotification({
-            title: '提示',
-            message: '跳转到TaskInfo组件'
-        });
-    }
-}
-
 async function checkExpiredContract() {
     // 获取下个月最后一天
     const today = new Date();
@@ -101,41 +82,14 @@ async function checkExpiredContract() {
     const day = String(lastDay.getDate()).padStart(2, '0');
     const formattedDate = `${year}-${month}-${day}`;
 
-    const baseUrl = 'https://www.xmf119.cn/admin/contract/index.html';
-    let allContracts = [];
-    let currentPage = 1;
-
     try {
-        // 获取第一页数据以确定总页数
-        const firstPageResponse = await axios.get(baseUrl, {
-            params: {
-                page: 1,
-                end: formattedDate,
-                sign_end_end: formattedDate,
-            }
-        });
-
-        const totalPages = firstPageResponse.data.all_page;
-        allContracts = [...firstPageResponse.data.list];
-
-        // 获取剩余页数的数据
-        for (let page = 2; page <= totalPages; page++) {
-            const response = await axios.get(baseUrl, {
-                params: {
-                    page,
-                    end: formattedDate,
-                    sign_end_end: formattedDate,
-                }
-            });
-            allContracts = [...allContracts, ...response.data.list];
-        }
-
+        const allContracts = await queryExpiredContract(formattedDate);
         contracts.value = allContracts;
         drawerVisible.value = true;
     } catch (error) {
         console.error(error);
         ElMessage({
-            message: '获取到期合同数据失败',
+            message: error.message,
             type: 'error',
             duration: 2000
         });
