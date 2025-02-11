@@ -6,14 +6,14 @@
 import { ref, onMounted } from 'vue';
 import TaskInfo from './components/TaskInfo.vue';
 import Detail from './components/Detail.vue';
-import None from './components/None.vue';
+import Index from './components/Index.vue';
 
 
 const currentModule = ref('None');
 const modules = {
   TaskInfo,
   Detail,
-  None
+  Index
 };
 
 onMounted(() => {
@@ -23,8 +23,8 @@ onMounted(() => {
     currentModule.value = 'TaskInfo';
   } else if (url.includes('showtestdetail')) {
     currentModule.value = 'Detail';
-  } else {
-    currentModule.value = 'None';
+  } else if (url.includes('index/index.html')) {
+    currentModule.value = 'Index';
   }
 });
 </script>

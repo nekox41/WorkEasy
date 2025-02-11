@@ -7,7 +7,7 @@ import { ElNotification, ElMessage, ElButton } from 'element-plus';
 import { queryProject } from '../api/query';
 
 const currentRow = ref(-1);
-
+const lastRow = ref(null);
 
 onMounted(async () => {
 
@@ -91,16 +91,16 @@ onMounted(async () => {
   document.addEventListener('keydown', (event) => {
 
     if (event.key === 'ArrowDown') {
-      // 如果不是第一行，取消上一行的选中状态
-      if (currentRow.value > 0) {
-        $(lines[currentRow.value - 1]).css("border", "none");
+      // 取消上一行的选中状态
+      if (lastRow.value !== null) {
+        lastRow.value.css("border", "none");
       }
 
       // 下一行
       currentRow.value++;
 
       // 确保不超出范围
-      if (currentRow.value >= lines.length) {
+      if (currentRow.value > lines.length) {
         currentRow.value = 0; // 回到第一行
       }
 
@@ -114,6 +114,39 @@ onMounted(async () => {
 
       // 确保存在后高亮并点击
       const selectedRow = lines[currentRow.value];
+      lastRow.value = $(selectedRow);
+      $(selectedRow).css("border", "3px solid yellow");
+      $(selectedRow.children[3]).children("a")[0].click()
+
+      // 缓存项目名称到本地，使得在新标签页中的脚本可以使用
+      localStorage.setItem("projectName", $('#taskAudit > div:nth-child(6) > div > input').val());
+    }
+
+    if (event.key === 'ArrowUp') {
+      // 取消上一行的选中状态
+      if (lastRow.value !== null) {
+        lastRow.value.css("border", "none");
+      }
+
+      // 下一行
+      currentRow.value--;
+
+      // 确保不超出范围
+      if (currentRow.value < 0) {
+        currentRow.value = lines.length - 1; // 跳转到最后一行
+      }
+
+      // 检查是否不存在
+      while (lines[currentRow.value].children[4].innerText === "不存在") {
+        currentRow.value--;
+        if (currentRow.value < 0) {
+          currentRow.value = lines.length - 1; // 回到第一行
+        }
+      }
+
+      // 确保存在后高亮并点击
+      const selectedRow = lines[currentRow.value];
+      lastRow.value = $(selectedRow);
       $(selectedRow).css("border", "3px solid yellow");
       $(selectedRow.children[3]).children("a")[0].click()
 
