@@ -1,6 +1,6 @@
 import { GM_xmlhttpRequest } from '$';
 
-const localVersion = 1.1;
+const localVersion = 1.2;
 
 export async function checkUpdate() {
     GM_xmlhttpRequest({
