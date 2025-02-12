@@ -1,15 +1,55 @@
 <template>
-  <el-image v-if="firstImage" :src="firstImage" :zoom-rate="1.2" :max-scale="7" :min-scale="0.2"
-    :preview-src-list="images" show-progress :initial-index="0" fit="cover" />
+  <div class="image-container">
+    <el-button
+      v-if="images.length > 1"
+      type="info"
+      class="nav-button prev-button"
+      @click="prevImage"
+      :icon="ArrowLeft"
+    />
+
+    <el-image
+      v-if="firstImage"
+      :src="firstImage"
+      :zoom-rate="1.2"
+      :max-scale="7"
+      :min-scale="0.2"
+      :preview-src-list="images"
+      show-progress
+      :initial-index="0"
+      fit="cover"
+    />
+
+    <el-button
+      v-if="images.length > 1"
+      type="info"
+      class="nav-button next-button"
+      @click="nextImage"
+      :icon="ArrowRight"
+    />
+  </div>
 </template>
 
 <script setup>
 import { onMounted, h, ref } from 'vue';
+import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue';
 import { queryProject, queryProjectBuilding, queryBuildingWater, queryImage } from '../api/query';
-import { ElNotification, ElTable, ElTableColumn } from 'element-plus';
+import { ElNotification, ElTable, ElTableColumn, ElButton, ElIcon } from 'element-plus';
 
 const firstImage = ref(null);
 const images = ref([]);
+const currentIndex = ref(0);
+
+// 添加翻页方法
+const nextImage = () => {
+  currentIndex.value = (currentIndex.value + 1) % images.value.length;
+  firstImage.value = images.value[currentIndex.value];
+};
+
+const prevImage = () => {
+  currentIndex.value = (currentIndex.value - 1 + images.value.length) % images.value.length;
+  firstImage.value = images.value[currentIndex.value];
+};
 
 onMounted(async () => {
   $(".long-td").each(async function () {
@@ -64,4 +104,30 @@ function resetImage() {
 }
 </script>
 
-<style scoped></style>
+<style scoped>
+.image-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.nav-button {
+  position: absolute;
+  z-index: 1;
+}
+
+.prev-button {
+  left: 20px;
+}
+
+.next-button {
+  right: 20px;
+}
+
+.el-image {
+  max-width: 90%;
+  margin: 0 auto;
+}
+</style>

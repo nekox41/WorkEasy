@@ -1,6 +1,6 @@
-import { GM_xmlhttpRequest, unsafeWindow, monkeyWindow, GM_addElement } from '$';
+import { GM_xmlhttpRequest } from '$';
 
-const localVersion = 0.1;
+const localVersion = 1.1;
 
 export async function checkUpdate() {
     GM_xmlhttpRequest({
