@@ -1,161 +1,182 @@
 <template>
+  <!-- 保持模板为空 -->
 </template>
 
 <script setup>
 import { onMounted, ref, h } from 'vue';
 import { ElNotification, ElMessage, ElButton } from 'element-plus';
-import { queryProject } from '../api/query';
+import { queryProject, queryPreServiceReport, baseUrl } from '../api/query';
+import axios from 'axios';
 
+// 状态管理
 const currentRow = ref(-1);
 const lastRow = ref(null);
+const lines = ref([]);
 
-onMounted(async () => {
+// 项目信息展示组件
+const showProjectInfo = (project) => {
+  ElNotification({
+    title: '项目信息',
+    message: h('p', null, [
+      createInfoButton('项目名字', project.name),
+      h('br'),
+      createInfoButton('负责人', project.project_leader_name),
+      h('br'),
+      createReportButton(project.name)
+    ]),
+    type: 'success',
+    duration: 0
+  });
+};
 
-  // 获取项目负责人
-  const projectName = $('#taskAudit > div:nth-child(6) > div > input').val();
-  try {
-    const data = await queryProject(projectName);
-  
-    if (data.list && data.list.length > 0) {
-      const project = data.list[0];
-      const projectName = project.name;
-      const projectLeader = project.project_leader_name;
+// 创建可复制的信息按钮
+const createInfoButton = (label, text) => {
+  return [
+    h('span', null, `${label}:`),
+    h(ElButton, {
+      text: true,
+      onClick: () => copyToClipboard(text, label)
+    }, text)
+  ];
+};
 
-      // 显示项目名字和项目负责人
-      ElNotification({
-        title: '项目信息',
-        message: h('p', null, [
-        h('span', null, `项目名字:`),
-          h(ElButton, {
-            text: true,
-            onClick: () => {
-              navigator.clipboard.writeText(projectName);
-              ElMessage({
-                message: '项目名字已复制到剪贴板',
-                type: 'success',
-                duration: 2000
-              });
-            }
-          }, projectName),
-          h('br'),
-          h('span', null, `负责人:`),
-          h(ElButton, {
-            text: true,
-            onClick: () => {
-              navigator.clipboard.writeText(projectLeader);
-              ElMessage({
-                message: '项目负责人已复制到剪贴板',
-                type: 'success',
-                duration: 2000
-              });
-            }
-          }, projectLeader)
-        ]),
-        type: 'success',
-        duration: 0 // 设置为 0 表示通知不会自动消失
-      });
-    } else {
-      ElNotification({
-        title: '错误',
-        message: '未找到相关项目',
-        type: 'error',
-        duration: 0 // 设置为 0 表示通知不会自动消失
-      });
+// 创建报告按钮
+const createReportButton = (projectName) => {
+  return h(ElButton, {
+    type: "info",
+    onClick: async () => {
+      try {
+        const result = await queryPreServiceReport(projectName);
+        if (!result) throw new Error('未找到上月报告');
+
+        const url = `${baseUrl}/admin/reportdocument/index.html?page=1&key=${result[0].contract_uuid}&key5=month&key2=${result[0].report_date_s}&key3=${result[0].report_date_e}`;
+        const rep = await axios.get(url);
+        window.open(rep.data.list[0].main_path);
+      } catch (error) {
+        showError(error.message);
+      }
     }
-  } catch (error) {
-    ElNotification({
-      title: '错误',
-      message: '获取项目数据失败',
-      type: 'error',
-      duration: 5 // 设置为 0 表示通知不会自动消失
+  }, "点击打开上月报告");
+};
+
+// 复制到剪贴板
+const copyToClipboard = async (text, label) => {
+  try {
+    await navigator.clipboard.writeText(text);
+    ElMessage({
+      message: `${label}已复制到剪贴板`,
+      type: 'success',
+      duration: 2000
     });
+  } catch {
+    showError('复制失败');
+  }
+};
+
+// 设置行样式
+const setRowStyle = (row) => {
+  const styles = {
+    '不符合': 'darkred',
+    '不能检查': 'Chocolate',
+    '不存在': 'darkgray',
+    '符合': 'darkgreen'
+  };
+  const status = row.children[4].innerText;
+  if (styles[status]) {
+    $(row).css({ 'background-color': styles[status], 'color': 'white' });
+  }
+};
+
+// 为每一行添加点击事件
+const setClickEvent = (index, row) => {
+  $(row).find('a').on('click', (e) => {
+    // 清除上一次选择
+    if (lastRow.value) {
+      lastRow.value.css("border", "none");
+    }
+    // 更新索引
+    currentRow.value = index;
+    // 高亮选中行
+    lastRow.value = $(row);
+    lastRow.value.css("border", "3px solid yellow");
+    // 缓存数据
+    localStorage.setItem("projectName", $('#taskAudit > div:nth-child(6) > div > input').val());
+  })
+}
+
+// 处理行选择
+const handleRowSelection = (direction) => {
+  // 清除上一次选择
+  if (lastRow.value) {
+    lastRow.value.css("border", "none");
   }
 
-  // 获取表格
-  const lines = $('#taskAudit > div > table > tbody > tr');
+  // 更新当前行索引
+  if (direction === 'up') {
+    currentRow.value = (currentRow.value - 1 + lines.value.length) % lines.value.length;
+  } else {
+    currentRow.value = (currentRow.value + 1) % lines.value.length;
+  }
 
-  // 为表格添加样式
-  lines.each(function () {
-    if (this.children[4].innerText === "不符合") {
-      $(this).css({ 'background-color': 'darkred', 'color': 'white' });
-    } else if (this.children[4].innerText === "不能检查") {
-      $(this).css({ 'background-color': 'Chocolate', 'color': 'white' });
-    } else if (this.children[4].innerText === "不存在") {
-      $(this).css({ 'background-color': 'darkgray', 'color': 'white' });
-    } else if (this.children[4].innerText === "符合") {
-      $(this).css({ 'background-color': 'darkgreen', 'color': 'white' });
-    }
-  })
+  // 跳过"不存在"的行
+  while (lines.value[currentRow.value].children[4].innerText === "不存在") {
+    currentRow.value = direction === 'up'
+      ? (currentRow.value - 1 + lines.value.length) % lines.value.length
+      : (currentRow.value + 1) % lines.value.length;
+  }
 
-  // 添加键盘事件监听器
-  document.addEventListener('keydown', (event) => {
+  // 高亮并点击选中的行
+  const selectedRow = lines.value[currentRow.value];
+  lastRow.value = $(selectedRow);
+  $(selectedRow).css("border", "3px solid yellow");
+  $(selectedRow.children[3]).children("a")[0].click();
 
-    if (event.key === 'ArrowDown') {
-      // 取消上一行的选中状态
-      if (lastRow.value !== null) {
-        lastRow.value.css("border", "none");
-      }
+  // 保存项目名称到本地存储
+  localStorage.setItem("projectName", $('#taskAudit > div:nth-child(6) > div > input').val());
+};
 
-      // 下一行
-      currentRow.value++;
-
-      // 确保不超出范围
-      if (currentRow.value > lines.length) {
-        currentRow.value = 0; // 回到第一行
-      }
-
-      // 检查是否不存在
-      while (lines[currentRow.value].children[4].innerText === "不存在") {
-        currentRow.value++;
-        if (currentRow.value >= lines.length) {
-          currentRow.value = 0; // 回到第一行
-        }
-      }
-
-      // 确保存在后高亮并点击
-      const selectedRow = lines[currentRow.value];
-      lastRow.value = $(selectedRow);
-      $(selectedRow).css("border", "3px solid yellow");
-      $(selectedRow.children[3]).children("a")[0].click()
-
-      // 缓存项目名称到本地，使得在新标签页中的脚本可以使用
-      localStorage.setItem("projectName", $('#taskAudit > div:nth-child(6) > div > input').val());
-    }
-
-    if (event.key === 'ArrowUp') {
-      // 取消上一行的选中状态
-      if (lastRow.value !== null) {
-        lastRow.value.css("border", "none");
-      }
-
-      // 下一行
-      currentRow.value--;
-
-      // 确保不超出范围
-      if (currentRow.value < 0) {
-        currentRow.value = lines.length - 1; // 跳转到最后一行
-      }
-
-      // 检查是否不存在
-      while (lines[currentRow.value].children[4].innerText === "不存在") {
-        currentRow.value--;
-        if (currentRow.value < 0) {
-          currentRow.value = lines.length - 1; // 回到第一行
-        }
-      }
-
-      // 确保存在后高亮并点击
-      const selectedRow = lines[currentRow.value];
-      lastRow.value = $(selectedRow);
-      $(selectedRow).css("border", "3px solid yellow");
-      $(selectedRow.children[3]).children("a")[0].click()
-
-      // 缓存项目名称到本地，使得在新标签页中的脚本可以使用
-      localStorage.setItem("projectName", $('#taskAudit > div:nth-child(6) > div > input').val());
-    }
+// 错误提示
+const showError = (message) => {
+  ElNotification({
+    title: '错误',
+    message,
+    type: 'error',
+    duration: 5000
   });
-})
+};
 
+// 初始化
+onMounted(async () => {
+  try {
+    const projectName = $('#taskAudit > div:nth-child(6) > div > input').val();
+    const data = await queryProject(projectName);
+
+    if (data.list?.length > 0) {
+      showProjectInfo(data.list[0]);
+    } else {
+      throw new Error('未找到相关项目');
+    }
+
+    // 初始化表格
+    lines.value = $('#taskAudit > div > table > tbody > tr');
+    lines.value.each((_, row) => {
+      setRowStyle(row);
+      setClickEvent(_, row);
+    });
+    // 添加键盘事件监听
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowDown') handleRowSelection('down');
+      if (event.key === 'ArrowUp') handleRowSelection('up');
+    });
+
+  } catch (error) {
+    showError(error.message);
+  }
+});
 </script>
 
-<style scoped></style>
+<style scoped>
+.el-notification.right {
+  width: auto;
+}
+</style>

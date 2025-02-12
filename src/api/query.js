@@ -5,7 +5,7 @@ export function getBaseUrl() {
   return new URL(url).origin;
 }
 
-const baseUrl = getBaseUrl();
+export const baseUrl = getBaseUrl();
 
 // 查询项目
 export async function queryProject(projectName) {
@@ -70,12 +70,12 @@ export async function queryImage(url) {
 
 // 查询到期合同
 export async function queryExpiredContract(formattedDate) {
-  const baseUrl = `${getBaseUrl()}/admin/contract/index.html`;
+  const url = `${getBaseUrl()}/admin/contract/index.html`;
   let allContracts = [];
 
   try {
     // 获取第一页数据以确定总页数
-    const firstPageResponse = await axios.get(baseUrl, {
+    const firstPageResponse = await axios.get(url, {
       params: {
         page: 1,
         end: formattedDate,
@@ -88,7 +88,7 @@ export async function queryExpiredContract(formattedDate) {
 
     // 获取剩余页数的数据
     for (let page = 2; page <= totalPages; page++) {
-      const response = await axios.get(baseUrl, {
+      const response = await axios.get(url, {
         params: {
           page,
           end: formattedDate,
@@ -101,5 +101,30 @@ export async function queryExpiredContract(formattedDate) {
     return allContracts;
   } catch (error) {
     throw new Error('获取到期合同数据失败');
+  }
+}
+
+// 查询服务报告
+export async function queryPreServiceReport(projectName) {
+  // 以格式化字符串（yyyy-mm-dd)获取上个月的第一天和最后一天
+  const today = new Date();
+  const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+  const firstDay = new Date(lastMonth.getFullYear(), lastMonth.getMonth(), 1);
+  const lastDay = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0);
+  const formattedFirstDay = `${firstDay.getFullYear()}-${(firstDay.getMonth() + 1).toString().padStart(2, '0')}-${firstDay.getDate().toString().padStart(2, '0')}`;
+  const formattedLastDay = `${lastDay.getFullYear()}-${(lastDay.getMonth() + 1).toString().padStart(2, '0')}-${lastDay.getDate().toString().padStart(2, '0')}`;
+
+  try {
+    const response = await axios.get(`${baseUrl}/admin/reportmiddleware/index.html`, {
+      params: {
+        page: 1,
+        key: projectName,
+        key2: formattedFirstDay,
+        key3: formattedLastDay,
+      }
+    });
+    return response.data.list;
+  } catch (error) {
+    throw new Error('获取服务报告数据失败');
   }
 }

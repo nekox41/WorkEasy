@@ -34,7 +34,7 @@
 import { onMounted, h, ref } from 'vue';
 import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue';
 import { queryProject, queryProjectBuilding, queryBuildingWater, queryImage } from '../api/query';
-import { ElNotification, ElTable, ElTableColumn, ElButton, ElIcon } from 'element-plus';
+import { ElNotification, ElTable, ElTableColumn, ElButton } from 'element-plus';
 
 const firstImage = ref(null);
 const images = ref([]);
