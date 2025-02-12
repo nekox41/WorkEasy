@@ -91,10 +91,9 @@ onMounted(async () => {
     };
     // 检查是否存在图片
     if (this.children[10].children.length != 0) {
-      resetImage();
-      images.value = await queryImage(this.children[10].children[0].href);
+      const imageList = await queryImage(this.children[10].children[0].href)
+      images.value = [...images.value, ...imageList];
       firstImage.value = images.value[0];
-      console.log(images)
     }
   });
 });
