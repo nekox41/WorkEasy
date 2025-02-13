@@ -14,8 +14,8 @@ export default defineConfig({
         match: ['*://*.xmf119.cn/*'],
         connect: ['gitee.com'],
         noframes: true,
-        description: '添加查看上个月报告的便捷功能。添加鼠标点击查看详情时的相关逻辑。',
-        version: '1.2',
+        description: '修复上个月非月计划时没办法快速打开的bug。',
+        version: '1.4',
         author: 'aameow',
       },
       build: {

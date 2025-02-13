@@ -49,7 +49,7 @@ const createReportButton = (projectName) => {
         const result = await queryPreServiceReport(projectName);
         if (!result) throw new Error('未找到上月报告');
 
-        const url = `${baseUrl}/admin/reportdocument/index.html?page=1&key=${result[0].contract_uuid}&key5=month&key2=${result[0].report_date_s}&key3=${result[0].report_date_e}`;
+        const url = `${baseUrl}/admin/reportdocument/index.html?page=1&key=${result[0].contract_uuid}&key2=${result[0].report_date_s}&key3=${result[0].report_date_e}`;
         const rep = await axios.get(url);
         window.open(rep.data.list[0].main_path);
       } catch (error) {
