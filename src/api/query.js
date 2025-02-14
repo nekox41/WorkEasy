@@ -1,11 +1,12 @@
 import axios from 'axios';
+import { all } from 'axios';
+
+export const baseUrl = getBaseUrl();
 
 export function getBaseUrl() {
   const url = window.location.href;
   return new URL(url).origin;
 }
-
-export const baseUrl = getBaseUrl();
 
 // 查询项目
 export async function queryProject(projectName) {
@@ -19,7 +20,6 @@ export async function queryProject(projectName) {
 
 // 查询所有项目
 export async function queryAllProject() {
-  const allProject = [];
   try {
     const firstResponse = await axios.get(`${baseUrl}/admin/contract/index.html`, {
       params: {
@@ -30,30 +30,33 @@ export async function queryAllProject() {
     });
 
     const pageNumbers = firstResponse.data.all_page;
-    allProject.push(...firstResponse.data.list);
-    for (let page = 2; page <= pageNumbers; page++) {
-      const response = await axios.get(`${baseUrl}/admin/contract/index.html`, {
+    const pageRequests = [];
+
+    for (let page = 1; page <= pageNumbers; page++) {
+      pageRequests.push(axios.get(`${baseUrl}/admin/contract/index.html`, {
         params: {
           page,
           key3: 0,
           key6: 1,
         }
-      });
-      allProject.push(...response.data.list);
+      }));
     }
+
+    const responses = await Promise.all(pageRequests);
+    const allProject = responses.flatMap(response => response.data.list);
+
     return allProject;
   } catch (error) {
     throw new Error('获取项目数据失败');
   }
-  
 }
 
 // 查询项目建筑物
-export async function queryProjectBuilding(projectId){
+export async function queryProjectBuilding(projectId) {
   const result = [];
   try {
     const response = await axios.get(`${baseUrl}/admin/contract/building.html?id=${projectId}`);
-    $(response.data).find(".long-td").each( function() {
+    $(response.data).find(".long-td").each(function () {
       result.push({
         buildingId: this.children[0].innerText,
         buildingName: this.children[1].innerText,
@@ -73,10 +76,10 @@ export async function queryProjectBuilding(projectId){
   }
 }
 
-export async function queryBuildingWater(buildingId){
+export async function queryBuildingWater(buildingId) {
   try {
     const response = await axios.get(`${baseUrl}/admin/contract/getwaterfacility.html?id=${buildingId}`);
-    if(response.data.data.is_water_facility === -1){
+    if (response.data.data.is_water_facility === -1) {
       return [];
     }
     return response.data.data.list;
@@ -90,7 +93,7 @@ export async function queryImage(url) {
   const result = [];
   try {
     const response = await axios.get(url);
-    $(response.data).find("img").each( function() {
+    $(response.data).find("img").each(function () {
       result.push(this.src);
     });
   } catch (error) {
@@ -157,5 +160,122 @@ export async function queryPreServiceReport(projectName) {
     return response.data.list;
   } catch (error) {
     throw new Error('获取服务报告数据失败');
+  }
+}
+
+// 查询任务
+export async function queryAllTask() {
+  // 获取 yyyy-mm-dd 格式的本月第一天和最后一天
+  const today = new Date();
+  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  const formattedFirstDay = `${firstDay.getFullYear()}-${(firstDay.getMonth() + 1).toString().padStart(2, '0')}-${firstDay.getDate().toString().padStart(2, '0')}`;
+  const formattedLastDay = `${lastDay.getFullYear()}-${(lastDay.getMonth() + 1).toString().padStart(2, '0')}-${lastDay.getDate().toString().padStart(2, '0')}`;
+
+  try {
+    const firstResponse = await axios.get(`${baseUrl}/admin/task/index.html`, {
+      params: {
+        page: 1,
+        key: formattedFirstDay,
+        key6: 0
+      },
+      headers: {
+        "x-requested-with": 'XMLHttpRequest'
+      }
+    });
+
+    const totalPages = firstResponse.data.allpage;
+    const pageRequests = [];
+
+    for (let page = 1; page <= totalPages; page++) {
+      pageRequests.push(axios.get(`${baseUrl}/admin/task/index.html`, {
+        params: {
+          page,
+          key: formattedFirstDay,
+          key6: 0
+        },
+        headers: {
+          "x-requested-with": 'XMLHttpRequest'
+        }
+      }));
+    }
+
+    const responses = await Promise.all(pageRequests);
+    const allTask = responses.flatMap(response => response.data.list);
+
+    return allTask.filter(task => task.type === "测试");
+  } catch (error) {
+    throw new Error('获取任务数据失败');
+  }
+}
+
+/**
+ * {
+ *  "projectName": "项目名称",
+ * "planCommitDate": "计划提交日期",
+ * "isAudit": "是否审核",
+ * "isReport": "是否有服务报告",}
+ */
+export async function getAllPlanInfo() {
+  try {
+    // 并行获取所有项目和任务
+    const [allProject, allTask] = await Promise.all([queryAllProject(), queryAllTask()]);
+    const allNotCompleteTask = allTask.filter(task => task.task_status_int !== 6);
+    const completedTasks = allTask.filter(task => task.task_status_int === 6);
+
+    // 初始化数据
+    const allPlanInfo = allProject.map(project => ({
+      projectName: project.name,
+      commit_time: null,
+      isAudit: null,
+      isReport: null,
+    }));
+
+    // 处理未完成任务
+    allNotCompleteTask.forEach(task => {
+      const projectName = task.contract_name;
+      const commit_time = task.commit_time === "" ? "未提交" : task.commit_time;
+      const isAudit = task.task_status_int === 5 ? '待审核' : '待提交';
+      const isReport = task.is_report === -1 ? '未生成' : '已生成';
+
+      const projectInfo = allPlanInfo.find(info => info.projectName === projectName);
+      if (projectInfo) {
+        projectInfo.commit_time = commit_time;
+        projectInfo.isAudit = isAudit;
+        projectInfo.isReport = isReport;
+      }
+    });
+
+    // 处理已完成任务
+    completedTasks.forEach(task => {
+      const projectName = task.contract_name;
+      const commit_time = task.commit_time;
+      const isAudit = '审核通过';
+      const isReport = task.is_report === -1 ? '未生成' : '已生成';
+
+      const projectInfo = allPlanInfo.find(info => info.projectName === projectName);
+      if (projectInfo && projectInfo.isAudit === null) {
+        projectInfo.commit_time = commit_time;
+        projectInfo.isAudit = isAudit;
+        projectInfo.isReport = isReport;
+      }
+    });
+
+    // 处理未下发的任务
+    allPlanInfo.forEach(projectInfo => {
+      if (projectInfo.commit_time === null) {
+        projectInfo.commit_time = "未下发";
+      }
+      if (projectInfo.isAudit === null) {
+        projectInfo.isAudit = "未下发";
+      }
+      if (projectInfo.isReport === null) {
+        projectInfo.isReport = "未下发";
+      }
+    });
+
+    return allPlanInfo;
+  } catch (error) {
+    throw new Error('获取计划信息失败');
   }
 }

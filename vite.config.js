@@ -14,8 +14,8 @@ export default defineConfig({
         match: ['*://*.xmf119.cn/*'],
         connect: ['gitee.com'],
         noframes: true,
-        description: '添加计划提示。',
-        version: '1.5',
+        description: '添加查看所有计划按钮；添加任务符合项提示；',
+        version: '1.6',
         author: 'aameow',
       },
       build: {

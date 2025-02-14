@@ -4,7 +4,7 @@
 
 <script setup>
 import { onMounted, ref, h } from 'vue';
-import { ElNotification, ElMessage, ElButton } from 'element-plus';
+import { ElNotification, ElMessage, ElButton, ElTag } from 'element-plus';
 import { queryProject, queryPreServiceReport, baseUrl } from '../api/query';
 import axios from 'axios';
 
@@ -12,6 +12,13 @@ import axios from 'axios';
 const currentRow = ref(-1);
 const lastRow = ref(null);
 const lines = ref([]);
+const count = ref({
+  total: 0, // 总数
+  pass: 0, // 合格
+  none: 0, // 不存在
+  waring: 0, // 不能检查
+  fail: 0 // 不合格
+});
 
 // 项目信息展示组件
 const showProjectInfo = (project) => {
@@ -128,7 +135,8 @@ const handleRowSelection = (direction) => {
   // 高亮并点击选中的行
   const selectedRow = lines.value[currentRow.value];
   lastRow.value = $(selectedRow);
-  $(selectedRow).css("border", "3px solid yellow");
+  lastRow.value.css("border", "3px solid yellow");
+  lastRow.value.get(0).scrollIntoView( {behavior: "smooth", block: "center"} );
   $(selectedRow.children[3]).children("a")[0].click();
 
   // 保存项目名称到本地存储
@@ -162,16 +170,45 @@ onMounted(async () => {
     lines.value.each((_, row) => {
       setRowStyle(row);
       setClickEvent(_, row);
+      if (row.children[4].innerText === "符合") {
+        count.value.total += 1;
+        count.value.pass += 1;
+      } else if (row.children[4].innerText === "不存在") {
+        count.value.total += 1;
+        count.value.none += 1;
+      } else if (row.children[4].innerText === "不能检查") {
+        count.value.total += 1;
+        count.value.uncheck += 1;
+      } else if (row.children[4].innerText === "不符合") {
+        count.value.total += 1;
+        count.value.fail += 1;
+      }
     });
     // 添加键盘事件监听
     document.addEventListener('keydown', (event) => {
-      if (event.key === 'ArrowDown') handleRowSelection('down');
-      if (event.key === 'ArrowUp') handleRowSelection('up');
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        handleRowSelection('down');
+      }
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        handleRowSelection('up');
+      }
     });
 
   } catch (error) {
     showError(error.message);
   }
+  ElMessage({
+    message: h('p', null, [
+    h(ElTag, { type: 'primary'}, `${count.value.total} 总项`),
+    h(ElTag, { type: 'success'}, `${count.value.pass} 符合`),
+    h(ElTag, { type: 'info'}, `${count.value.none} 不存在`),
+    h(ElTag, { type: 'warning'}, `${count.value.waring} 不能检查`),
+    h(ElTag, { type: 'danger'}, `${count.value.fail} 不符合`),
+    ]),
+    duration: 10000
+  })
 });
 </script>
 
