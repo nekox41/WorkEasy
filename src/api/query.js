@@ -17,6 +17,37 @@ export async function queryProject(projectName) {
   }
 }
 
+// 查询所有项目
+export async function queryAllProject() {
+  const allProject = [];
+  try {
+    const firstResponse = await axios.get(`${baseUrl}/admin/contract/index.html`, {
+      params: {
+        page: 1,
+        key3: 0,
+        key6: 1,
+      }
+    });
+
+    const pageNumbers = firstResponse.data.all_page;
+    allProject.push(...firstResponse.data.list);
+    for (let page = 2; page <= pageNumbers; page++) {
+      const response = await axios.get(`${baseUrl}/admin/contract/index.html`, {
+        params: {
+          page,
+          key3: 0,
+          key6: 1,
+        }
+      });
+      allProject.push(...response.data.list);
+    }
+    return allProject;
+  } catch (error) {
+    throw new Error('获取项目数据失败');
+  }
+  
+}
+
 // 查询项目建筑物
 export async function queryProjectBuilding(projectId){
   const result = [];

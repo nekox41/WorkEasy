@@ -14,8 +14,8 @@ export default defineConfig({
         match: ['*://*.xmf119.cn/*'],
         connect: ['gitee.com'],
         noframes: true,
-        description: '修复上个月非月计划时没办法快速打开的bug。',
-        version: '1.4',
+        description: '添加计划提示。',
+        version: '1.5',
         author: 'aameow',
       },
       build: {

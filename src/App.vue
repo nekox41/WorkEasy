@@ -7,12 +7,14 @@ import { ref, onMounted } from 'vue';
 import TaskInfo from './components/TaskInfo.vue';
 import Detail from './components/Detail.vue';
 import Index from './components/Index.vue';
+import Plan from './components/Plan.vue';
 
 const currentModule = ref('None');
 const modules = {
   TaskInfo,
   Detail,
-  Index
+  Index,
+  Plan
 };
 
 onMounted(() => {
@@ -25,6 +27,8 @@ onMounted(() => {
     currentModule.value = 'Detail';
   } else if (url.includes('index/index.html')) {
     currentModule.value = 'Index';
+  } else if (url.includes('contractplan')) {
+    currentModule.value = "Plan"
   }
 });
 

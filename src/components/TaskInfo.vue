@@ -176,7 +176,7 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.el-notification.right {
+.el-notification {
   width: auto;
 }
 </style>
