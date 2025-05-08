@@ -13,18 +13,19 @@ export default defineConfig({
         namespace: 'npm/vite-plugin-monkey',
         match: ['*://*.xmf119.cn/*'],
         connect: ['gitee.com'],
-        noframes: true,
-        description: '添加查看所有计划按钮；添加任务符合项提示；',
-        version: '1.6',
+        description: '更新',
+        version: '1.7',
         author: 'aameow',
+        "run-at": "document-end",
       },
       build: {
         externalGlobals: {
           vue: cdn.jsdelivr('Vue', 'dist/vue.global.prod.js').concat(util.dataUrl(';window.Vue=Vue;')),
-          'element-plus': cdn.jsdelivr('ElementPlus', 'dist/index.full.js'),
+          axios: cdn.jsdelivr('axios', 'dist/axios.min.js'),
+          'element-plus': cdn.jsdelivr('ElementPlus', 'dist/index.full.min.js'),
         },
         externalResources: {
-          'element-plus': cdn.jsdelivr('ElementPlus', 'dist/index.css'),
+          'element-plus/dist/index.css': cdn.jsdelivr(),
         }
       },
     }),

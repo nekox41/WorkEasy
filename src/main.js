@@ -1,26 +1,48 @@
 // main.js
 import { createApp } from 'vue'
-import App from './App.vue'
+import Welcome from './components/Index/Welcome.vue';
+import Table from './components/Index/Table.vue';
+import Task from './components/Task/Task.vue';
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
-import jQuery from 'jquery';
-import { checkUpdate } from './api/update';
 
+// 检测网址
+if (document.URL.includes("/admin/index/indexpage.html")) {
+    // 欢迎弹窗
+    createApp(Welcome).mount(
+        (() => {
+            const app = document.createElement('div');
+            document.body.append(app);
+            return app;
+        })(),
+    );
 
-checkUpdate();
+    // 信息看板
+    createApp(Table).mount(
+        (() => {
+            console.log("loading table module...")
+            const app = document.createElement('div');
+            const element = document.querySelector("body > div.example-wrap > div")
+            if (element) {
+                console.log("found element")
+                element.append(app);
+            }
+            return app;
+        })(),
+    );
 
-const app = createApp(App);
+}
 
-// 使用ElementPlus
-app.use(ElementPlus);
-
-// 添加 jQuery 到全局
-app.config.globalProperties.$ = jQuery;
-
-// 创建 div
-const div = document.createElement('div');
-div.id = 'app';
-document.body.appendChild(div);
-
-// 挂载
-app.mount('#app');
+// 任务页面
+if (document.URL.includes("/admin/task/taskInfo")) {
+    // 展示任务信息
+    const container = document.createElement('div');
+    container.id = "app";
+    container.style.display = "block"
+    document.querySelector("#taskAudit > div:nth-child(21)").appendChild(container);
+    document.querySelector("#taskAudit > div:nth-child(21) > label").className = "col-sm-4 control-label"
+    document.querySelector("#taskAudit > div:nth-child(21) > label").textContent = "助手功能："
+    const app = createApp(Task)
+    app.use(ElementPlus)
+    app.mount("#app")
+}
