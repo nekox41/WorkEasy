@@ -17,6 +17,7 @@ export default defineConfig({
         version: '2.0',
         author: 'aameow',
         "run-at": "document-end",
+        updateURL: "https://gitee.com/aameow/work-easy/raw/main/dist/workeasy.user.js"
       },
       build: {
         externalGlobals: {
@@ -30,4 +31,7 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    minify: true,
+  }
 });
