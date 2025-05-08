@@ -24,11 +24,10 @@ const projectKey = generateKey(document.querySelector("#taskAudit > div:nth-chil
  */
 function restoreFromCache(key) {
     const cachedItem = localStorage.getItem(key);
-    console.log(cachedItem)
     if (!cachedItem) return false;
 
     try {
-        const { dataList: data, timestamp } = JSON.parse(cachedItem);
+        const { dataList: data, timestamp, rightLength } = JSON.parse(cachedItem);
         const now = Date.now();
 
         // 缓存过期（30天）
@@ -38,7 +37,6 @@ function restoreFromCache(key) {
             return false;
         }
         // 验证缓存
-        const rightLength = pageData.value.length + 3;
         if (data.length !== rightLength) {
             console.log('缓存错误')
             localStorage.removeItem(key);
@@ -61,6 +59,7 @@ function saveToCache(key) {
     const cacheData = {
         dataList: dataList.value,
         timestamp: Date.now(),
+        rightLength: totalItem.value,
     };
     localStorage.setItem(key, JSON.stringify(cacheData));
 }
@@ -136,7 +135,9 @@ onMounted(async () => {
 
     document.addEventListener("keydown", async (event) => {
         // 如果面板未打开，直接返回
-        if (!isActivate.value) return
+        if (!isActivate.value || document.querySelector('.el-image-viewer__wrapper')) {
+            return;
+        }
 
         if (event.key === "ArrowRight") {
             event.preventDefault()

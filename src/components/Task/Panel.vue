@@ -1,5 +1,7 @@
 <script setup>
-import { onMounted, computed } from 'vue'
+import { onMounted, computed, h } from 'vue'
+import { getWaterInfo } from '../../api/utils'
+import { ElNotification } from 'element-plus';
 
 const props = defineProps({
     system: { type: String, required: true },
@@ -14,7 +16,7 @@ const props = defineProps({
     remark: { type: String, required: false },
     type: { type: String, required: true },
 })
-
+const name = document.querySelector("#taskAudit > div:nth-child(6) > div > input").value;
 const typeConfig = {
     "基本信息": { color: "#23c6c8", type: "badge-info" },
     "符合": { color: "#1c84c6", type: "badge-success" },
@@ -30,6 +32,18 @@ const panelBorderColor = computed(() => {
 const panelTag = computed(() => {
     return typeConfig[props.type].type
 })
+
+async function showWaterInfo() {
+    const infoArray = await getWaterInfo(name);
+    console.log(infoArray);
+    infoArray.forEach(item => {
+        ElNotification({
+            title: item.name,
+            message: h('div', null, item.data.map(info => h('p', null, `${info.position}的${info.container_type_str}容量${info.capacity}m³`))),
+            duration: 5000
+        })
+    })
+}
 
 onMounted(() => {
     console.log(props)
@@ -61,15 +75,9 @@ onMounted(() => {
             </div>
             <hr>
             <div class="image-container">
-                <el-image style="width: 300px; height: 400px;"
-                    :src="props.images[0]"
-                    :preview-src-list="props.images"
-                    show-progress
-                    fit="cover"
-                    :initial-index="0"
-                    preview-teleported="true"/>
-                <span class="badge badge-primary image-counter"
-                    v-if="props.images.length > 1">
+                <el-image style="width: 300px; height: 400px;" :src="props.images[0]" :preview-src-list="props.images"
+                    show-progress fit="cover" :initial-index="0" preview-teleported="true" />
+                <span class="badge badge-primary image-counter" v-if="props.images.length > 1">
                     {{ props.images.length }}
                 </span>
             </div>
@@ -83,11 +91,19 @@ onMounted(() => {
         </div>
         <hr>
         <div class="panel-progress">
-            <span style="margin-right: 20px;height: 20px;">【{{ currentProgress }}/{{ totalItem }}】</span>
-            <div class="progress progress-striped">
+            <span class="progress-text">【{{ currentProgress }}/{{ totalItem }}】</span>
+
+            <div class="progress-box">
+                <div class="progress progress-striped">
                 <div :style="{ width: currentProgress / totalItem * 100 + '%' }"
-                    class="progress-bar progress-bar-success"></div>
+                    class="progress-bar progress-bar-success">
+                </div>
             </div>
+            </div>
+
+            <button type="button" class="btn btn-primary btn-xs checkwater" @click="showWaterInfo()">
+                检查储水
+            </button>
         </div>
     </div>
 </template>
@@ -113,7 +129,8 @@ onMounted(() => {
     background-color: #f5f5f5;
     display: flex;
     align-items: center;
-    justify-content: space-between; /* 左右对齐 */
+    justify-content: space-between;
+    /* 左右对齐 */
 }
 
 .title-group {
@@ -135,13 +152,19 @@ onMounted(() => {
 .right-group {
     display: flex;
     align-items: center;
-    gap: 10px; /* badge 和按钮之间的间距 */
+    gap: 10px;
+    /* badge 和按钮之间的间距 */
 }
 
 .panel-body {
     padding: 20px;
     flex: 1;
     overflow-y: auto;
+}
+
+.panel-body :deep(b) {
+    font-size: 16px;
+    color: black;
 }
 
 .image-container {
@@ -186,13 +209,23 @@ onMounted(() => {
 }
 
 .panel-progress {
-    display: flex;
-    justify-content: center;
+    display: inline-flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: space-around;
+    align-items: flex-start;
 }
 
-.progress {
+.progress-box {
     width: 50%;
-    height: 20px;
+}
+
+.progress-text {
+    font-size: 16px;
+}
+
+.checkwater {
+    font-size: 16px;
 }
 
 .badge {
