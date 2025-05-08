@@ -21,7 +21,7 @@ const typeConfig = {
     "基本信息": { color: "#23c6c8", type: "badge-info" },
     "符合": { color: "#1c84c6", type: "badge-success" },
     "不符合": { color: "#ed5565", type: "badge-danger" },
-    "无法检查": { color: "#f8ac59", type: "badge-warning" },
+    "不能检查": { color: "#f8ac59", type: "badge-warning" },
     "不存在": { color: "#5e5e5e", type: "" }
 }
 

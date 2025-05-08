@@ -13,11 +13,11 @@ export default defineConfig({
         namespace: 'npm/vite-plugin-monkey',
         match: ['*://*.xmf119.cn/*'],
         connect: ['gitee.com'],
-        description: '彻底重构脚本，组件尽量使用符合网站风格的。特殊情况使用ElementPlus。',
-        version: '2.0',
+        description: '修复不能检查会导致面板消失的bug',
+        version: '2.1',
         author: 'aameow',
         "run-at": "document-end",
-        updateURL: "https://gitee.com/aameow/work-easy/raw/main/dist/workeasy.user.js"
+        updateURL: "https://gitee.com/nekox41/work-easy/raw/main/dist/workeasy.user.js"
       },
       build: {
         externalGlobals: {
@@ -30,8 +30,5 @@ export default defineConfig({
         }
       },
     }),
-  ],
-  build: {
-    minify: true,
-  }
+  ]
 });
