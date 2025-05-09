@@ -2,7 +2,8 @@
 import { onMounted, ref } from 'vue';
 import Panel from './Panel.vue';
 import { getTaskDetails, getImages } from "../../api/Task/task"
-import { generateKey } from '../../api/utils';
+
+const submissionTime = document.querySelector("#taskAudit > div:nth-child(16) > div > input").value
 
 // 用于Panel的数据
 const dataList = ref([]);
@@ -16,7 +17,7 @@ const progressW = ref(0);
 const totalItem = ref(0);
 const currentProgress = ref(1);
 // 生成项目key
-const projectKey = generateKey(document.querySelector("#taskAudit > div:nth-child(6) > div > input").value);
+const projectKey = document.querySelector("#taskAudit > div:nth-child(6) > div > input").value + "_" + document.querySelector("#taskAudit > div:nth-child(4) > div > input").value
 /**
  * 恢复30天内的缓存数据
  * @param {string} key - 缓存的键（项目名加上月份）
@@ -27,12 +28,17 @@ function restoreFromCache(key) {
     if (!cachedItem) return false;
 
     try {
-        const { dataList: data, timestamp, rightLength } = JSON.parse(cachedItem);
+        const { dataList: data, timestamp, rightLength, submissionTime: cacheSubmissionTime } = JSON.parse(cachedItem);
         const now = Date.now();
 
         // 缓存过期（30天）
         if (now - timestamp > 24 * 60 * 60 * 1000 * 30) {
             console.log('缓存过期')
+            localStorage.removeItem(key);
+            return false;
+        }
+        if (submissionTime !== cacheSubmissionTime) {
+            console.log('任务已经重新提交')
             localStorage.removeItem(key);
             return false;
         }
@@ -60,6 +66,7 @@ function saveToCache(key) {
         dataList: dataList.value,
         timestamp: Date.now(),
         rightLength: totalItem.value,
+        submissionTime: submissionTime
     };
     localStorage.setItem(key, JSON.stringify(cacheData));
 }
@@ -179,13 +186,15 @@ onMounted(async () => {
     }" v-if="isActivate" @close="isActivate = false" />
     <button class="btn btn-w-m btn-primary" @click="isActivate = true" type="button">一键检查</button>
 
-    <div class="progress-container" v-if="isLoading">
-        <span class="alert alert-info">数据加载中...</span>
-        <hr>
-        <div class="progress progress-striped">
-            <div :style="{ width: progressW + '%' }" class="progress-bar progress-bar-success"></div>
+    <Teleport to="body">
+        <div class="progress-container" v-if="isLoading">
+            <span class="alert alert-info">数据加载中...</span>
+            <hr>
+            <div class="progress progress-striped">
+                <div :style="{ width: progressW + '%' }" class="progress-bar progress-bar-success"></div>
+            </div>
         </div>
-    </div>
+    </Teleport>
 
 </template>
 

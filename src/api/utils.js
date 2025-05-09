@@ -1,10 +1,6 @@
 import { formattedDate, BASE_URL } from "./constants"
 import axios from "axios";
 
-function generateKey(name) {
-    return `${name}-${formattedDate}`;
-}
-
 /**
  * 根据项目名称获取所有关联建筑的储水设施信息
  * @param {string} name - 项目名称
@@ -59,6 +55,5 @@ async function getWaterInfo(name) {
 }
 
 export {
-    generateKey,
     getWaterInfo
 }

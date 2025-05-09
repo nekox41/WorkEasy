@@ -84,6 +84,7 @@ async function getUncheckedProject(page) {
 async function getUngeneratedProject() {
     // 创建一个列表，返回所有待生成报告的项目
     const allProject = [];
+    const addedProject = new Set();
     // 1. 获取审核通过的项目（第一页）
     const res = await axios.get(BASE_URL + `/admin/task/index.html?page=1&key=${formattedDate}-01&key3[]=6&key5[]=5&key6=3`, { headers: { 'X-Requested-With': 'XMLHttpRequest', } });
     if (res.total === 0) {
@@ -96,7 +97,22 @@ async function getUngeneratedProject() {
         if (!isReported(res.data.list[i])) {
             // 如果未生成报告，则检查是否可以生成报告
             if (await isGeneratable(res.data.list[i].contract_uuid)) {
-                allProject.push(res.data.list[i]);
+                // 检查是否已提交
+                const contractName = res.data.list[i].contract_name;
+                if (!addedProject.has(contractName)) {
+                    allProject.push(res.data.list[i]);
+                    addedProject.add(contractName);
+                }
+            } else { // 如果无法生成报告，则要检查是否有已添加可生成的同名项目，将其删除
+                const contractName = res.data.list[i].contract_name;
+                if (addedProject.has(contractName)) {
+                    // 删除allProject中的该项目，保留addedProject中的该项目避免后续添加
+                    for (let j = 0; j < allProject.length; j++) {
+                        if (allProject[j].contract_name === contractName) {
+                            allProject.splice(j, 1);
+                        }
+                    }
+                }
             }
         }
     }
@@ -127,7 +143,7 @@ function isReported(object) {
 async function isGeneratable(uuid) {
     const res = await axios.get(BASE_URL + `/admin/report/index.html?page=1&contract_uuid=${uuid}&contract_type=4&plan_date=${formattedDate}`)
     if (res.status === 200) {
-        if (res.data[0].is_finish === -1) {
+        if (res.data.data[0].is_finish === 1) {
             return true;
         }
         return false;

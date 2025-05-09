@@ -18,19 +18,14 @@ if (document.URL.includes("/admin/index/indexpage.html")) {
     );
 
     // 信息看板
-    createApp(Table).mount(
-        (() => {
-            console.log("loading table module...")
-            const app = document.createElement('div');
-            const element = document.querySelector("body > div.example-wrap > div")
-            if (element) {
-                console.log("found element")
-                element.append(app);
-            }
-            return app;
-        })(),
-    );
-
+    const tableApp = createApp(Table);
+    const tableContainer = document.createElement('div');
+    const tableTarget = document.querySelector("body > div.example-wrap > div")
+    if (tableTarget) {
+        tableTarget.append(tableContainer);
+    }
+    tableApp.use(ElementPlus);
+    tableApp.mount(tableContainer);
 }
 
 // 任务页面

@@ -1,21 +1,5 @@
 <template>
     <div class="kanban">
-        <div class="spiner-example kanbanloading" v-if="loading">
-            <div class="sk-spinner sk-spinner-circle">
-                <div class="sk-circle1 sk-circle"></div>
-                <div class="sk-circle2 sk-circle"></div>
-                <div class="sk-circle3 sk-circle"></div>
-                <div class="sk-circle4 sk-circle"></div>
-                <div class="sk-circle5 sk-circle"></div>
-                <div class="sk-circle6 sk-circle"></div>
-                <div class="sk-circle7 sk-circle"></div>
-                <div class="sk-circle8 sk-circle"></div>
-                <div class="sk-circle9 sk-circle"></div>
-                <div class="sk-circle10 sk-circle"></div>
-                <div class="sk-circle11 sk-circle"></div>
-                <div class="sk-circle12 sk-circle"></div>
-            </div>
-        </div>
         <table class="table table-bordered table-hover">
             <thead>
                 <tr class="long-tr">
@@ -39,7 +23,11 @@
                     <td>{{ tableData.unissued }}</td>
                     <td>{{ tableData.unfinished }}</td>
                     <td>{{ tableData.unchecked }}</td>
-                    <td>{{ tableData.ungenerated }}</td>
+                    <td>
+                        <el-button text @click="showUngenerated">
+                            {{ tableData.ungenerated }}
+                        </el-button>
+                    </td>
                     <td>{{ tableData.unrecorded }}</td>
                 </tr>
             </tbody>
@@ -53,13 +41,22 @@
             <span>助手尚在实验中，不要盲目相信。建议每间隔两天手动检查一次项目状况。</span>
         </div>
     </div>
+    <el-dialog
+        v-model="dialogVisible"
+        top="20vh"
+        width="60%">
+        <el-table :data="generatable" stripe>
+            <el-table-column prop="contract_name" label="项目名"/>
+            <el-table-column prop="plan_name" label="计划"/>
+            <el-table-column prop="commit_time" label="提交时间"/>
+        </el-table>
+    </el-dialog>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
 import { getUnrecordedProject, getUncreatedProject, getUnissuedProject, getUnfinishedProject, getUncheckedProject, getUngeneratedProject } from '../../api/Index/table'
 
-const loading = ref(true);
 const tableData = ref({
     total: 0,
     uncreated: 0,
@@ -68,30 +65,9 @@ const tableData = ref({
     unchecked: 0,
     ungenerated: 0,
     unrecorded: 0,
-    generatable: []
 });
-
-// async function getAllProject() {
-//     try {
-//         const res = await getProjectPage(1);
-//         if (!res || !res.all_page || !res.list) {
-//             console.error('获取项目列表失败：无效的响应数据');
-//             return;
-//         }
-//         const allPage = res.all_page;
-//         tableData.value.list.push(...res.list);
-//         for (let i = 2; i <= allPage; i++) {
-//             const res = await getProjectPage(i);
-//             if (res && res.list) {
-//                 tableData.value.list.push(...res.list);
-//             }
-//         }
-//         tableData.value.total = tableData.value.list.length;
-//     } catch (error) {
-//         console.error('获取项目列表失败：', error);
-//     }
-// }
-
+const dialogVisible = ref(false);
+const generatable = ref([]);
 async function fetchData() {
     try {
         tableData.value.total = parseInt(document.querySelector("body > div.example-wrap > div > table > tbody > tr > td:nth-child(5) > a").textContent)
@@ -129,9 +105,9 @@ async function fetchData() {
         const uncheckedRes = await getUncheckedProject();
         tableData.value.unchecked = uncheckedRes.total;
 
-        tableData.value.generatable = getUngeneratedProject();
-        tableData.value.ungenerated = tableData.value.generatable.length ? tableData.value.generatable.length : 0;
-
+        generatable.value = await getUngeneratedProject();
+        tableData.value.ungenerated = generatable.value.length
+        console.log(tableData.value.ungenerated);
         const unrecordedRes = await getUnrecordedProject();
         if (unrecordedRes && unrecordedRes.page_str) {
             const match = unrecordedRes.page_str.match(/共(\d+)条$/);
@@ -143,9 +119,12 @@ async function fetchData() {
         }
     } catch (error) {
         console.error('获取项目状态数据失败：', error);
-    } finally {
-        loading.value = false;
     }
+}
+
+function showUngenerated() {
+    dialogVisible.value = true;
+
 }
 
 onMounted(() => {
