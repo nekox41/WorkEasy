@@ -123,8 +123,24 @@ async function getUngeneratedProject() {
         totalPage = res.data.allpage;
         for (let i = 0; i < res.data.list.length; i++) {
             if (!isReported(res.data.list[i])) {
+                // 如果未生成报告，则检查是否可以生成报告
                 if (await isGeneratable(res.data.list[i].contract_uuid)) {
-                    allProject.push(res.data.list[i]);
+                    // 检查是否已提交
+                    const contractName = res.data.list[i].contract_name;
+                    if (!addedProject.has(contractName)) {
+                        allProject.push(res.data.list[i]);
+                        addedProject.add(contractName);
+                    }
+                } else { // 如果无法生成报告，则要检查是否有已添加可生成的同名项目，将其删除
+                    const contractName = res.data.list[i].contract_name;
+                    if (addedProject.has(contractName)) {
+                        // 删除allProject中的该项目，保留addedProject中的该项目避免后续添加
+                        for (let j = 0; j < allProject.length; j++) {
+                            if (allProject[j].contract_name === contractName) {
+                                allProject.splice(j, 1);
+                            }
+                        }
+                    }
                 }
             }
         }
