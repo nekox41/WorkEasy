@@ -13,8 +13,8 @@ export default defineConfig({
         namespace: 'npm/vite-plugin-monkey',
         match: ['*://*.xmf119.cn/*'],
         connect: ['gitee.com'],
-        description: '修复不能检查会导致面板消失的bug',
-        version: '2.1',
+        description: '修复bug',
+        version: '2.2',
         author: 'aameow',
         "run-at": "document-end",
         updateURL: "https://gitee.com/nekox41/work-easy/raw/main/dist/workeasy.user.js"
