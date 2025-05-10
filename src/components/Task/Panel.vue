@@ -19,12 +19,20 @@ const props = defineProps({
 const dialogVisible = defineModel("dialogVisible")
 const name = document.querySelector("#taskAudit > div:nth-child(6) > div > input").value;
 const typeConfig = {
-    "基本信息": { color: "#23c6c8", type: "badge-info" },
-    "符合": { color: "#1c84c6", type: "badge-success" },
-    "不符合": { color: "#ed5565", type: "badge-danger" },
-    "不能检查": { color: "#f8ac59", type: "badge-warning" },
-    "不存在": { color: "#5e5e5e", type: "" }
+    "基本信息": { text: "基本信息", type: "primary" },
+    "符合": { text: "符合", type: "success" },
+    "不符合": { text: "不符合", type: "danger" },
+    "不能检查": { text: "不能检查", type: "warning" },
+    "不存在": { text: "不存在", type: "info" },
+    undefined: { text: "未定义", type: "info" }
 }
+const tagType = computed(() => {
+    console.log(props.type)
+    return typeConfig[props.type].type
+})
+const tagText = computed(() => {
+    return typeConfig[props.type].text
+})
 const currentPercent = computed(() => {
     const num = props.currentProgress / props.totalItem * 100;
     return num.toFixed(2);
@@ -57,9 +65,9 @@ async function showWaterInfo() {
 
         <!-- 内容 -->
         <div class="dialog-content">
-            <div>
-                <b>测试内容：</b>
-                <span class="test-content" v-html="props.content"></span>
+            <div class="test-content">
+                <el-tag :type="tagType" effect="dark" style="font-size: 16px;">测试内容（{{ tagText }}）</el-tag>
+                <span v-html="props.content"></span>
             </div>
             <el-divider />
             <div v-if="props.remark">
@@ -90,6 +98,7 @@ async function showWaterInfo() {
 </template>
 
 <style scoped>
+
 .dialog-content :deep(b) {
     font-size: 16px;
     color: black;
@@ -125,5 +134,13 @@ async function showWaterInfo() {
 .button-group {
     display: flex;
     gap: 8px;
+}
+
+.test-content {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: flex-start;
+    gap: 12px;
 }
 </style>

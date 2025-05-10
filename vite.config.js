@@ -13,8 +13,8 @@ export default defineConfig({
         namespace: 'npm/vite-plugin-monkey',
         match: ['*://*.xmf119.cn/*'],
         connect: ['gitee.com'],
-        description: '修复bug',
-        version: '2.2',
+        description: '添加一键退回按钮；修复进度条Bug',
+        version: '2.3',
         author: 'aameow',
         "run-at": "document-end",
         updateURL: "https://gitee.com/nekox41/work-easy/raw/main/dist/workeasy.user.js"
