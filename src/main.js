@@ -9,13 +9,11 @@ import 'element-plus/dist/index.css'
 // 检测网址
 if (document.URL.includes("/admin/index/indexpage.html")) {
     // 欢迎弹窗
-    createApp(Welcome).mount(
-        (() => {
-            const app = document.createElement('div');
-            document.body.append(app);
-            return app;
-        })(),
-    );
+    const welcomeApp = createApp(Welcome);
+    const welcomeContainer = document.createElement('div');
+    welcomeApp.use(ElementPlus);
+    welcomeApp.mount(welcomeContainer);
+    document.body.append(welcomeContainer);
 
     // 信息看板
     const tableApp = createApp(Table);

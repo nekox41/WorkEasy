@@ -1,7 +1,36 @@
-# Vue 3 + Vite
+### 小蜜蜂助手
 
-This template should help get you started developing with Vue 3 in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+#### 首页
 
-## Recommended IDE Setup
+1. 欢迎弹窗
 
-- [VS Code](https://code.visualstudio.com/) + [Vue - Official](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+在首页加载时，弹出欢迎窗口，提示用户脚本已加载。
+
+![alt text](img/welcome.png)
+
+2. 首页看板
+
+在首页加载完成后，在最下方添加数据看板，可以总览一些信息。例如项目总数、未创建计划的项目、未完成的项目计划、待审核的任务、审核通过待生成报告的任务、待备案的任务...
+
+![alt text](img/kanban.png)
+
+#### 审核任务
+
+在点进任务详情后，会加载任务的所有数据，当用户点击一键检查按钮后，会进行一个弹窗将数据展示出来。
+
+![alt text](img/taskbutton.png)
+
+![alt text](img/taskDialog.png)
+
+当用户点击检查储水信息的按钮后，会查看项目的所有建筑，将登记的储水信息进行展示。
+
+![alt text](img/checkWater.png)
+
+> [!WARNING]
+> 警告，此功能可能不安全。
+
+当任务需要修改，现场操作人员在等待的时候，联系项目负责人再退回是一件很麻烦的事情，很有可能项目负责人正在忙，好半天才联系上。考虑到任务生成报告的时候，只会生成项目负责人通过审核时候的自拍照，所以我们可以直接在网页上进行退回。
+
+所以添加了一个一键退回的按钮，当点击后会自动退回项目。
+
+### 

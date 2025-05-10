@@ -16,6 +16,7 @@ const props = defineProps({
     remark: { type: String, required: false },
     type: { type: String, required: true },
 })
+const dialogVisible = defineModel("dialogVisible")
 const name = document.querySelector("#taskAudit > div:nth-child(6) > div > input").value;
 const typeConfig = {
     "基本信息": { color: "#23c6c8", type: "badge-info" },
@@ -24,15 +25,10 @@ const typeConfig = {
     "不能检查": { color: "#f8ac59", type: "badge-warning" },
     "不存在": { color: "#5e5e5e", type: "" }
 }
-
-const panelBorderColor = computed(() => {
-    return typeConfig[props.type].color
+const currentPercent = computed(() => {
+    const num = props.currentProgress / props.totalItem * 100;
+    return num.toFixed(2);
 })
-
-const panelTag = computed(() => {
-    return typeConfig[props.type].type
-})
-
 async function showWaterInfo() {
     const infoArray = await getWaterInfo(name);
     console.log(infoArray);
@@ -44,192 +40,90 @@ async function showWaterInfo() {
         })
     })
 }
-
-onMounted(() => {
-    console.log(props)
-})
 </script>
 
 <template>
-    <div class="panel" :style="{ borderTopColor: panelBorderColor }">
-        <div class="panel-heading">
-            <!-- 左侧标题 -->
-            <div class="title-group">
-                <span class="system-title">{{ props.system }}</span>
-                <span class="item-title">{{ props.item }}</span>
+    <el-dialog id="dialog" v-model="dialogVisible" title="Tips" width="90%" :before-close="handleClose"
+        :close-on-press-escape="false" :append-to-body="true" top="10px">
+        <!-- 头部内容 -->
+        <template #header="{ close, titleId, titleClass }">
+            <div class="header-left">
+                <h4 :id="titleId" :class="titleClass">{{ props.system }}</h4>
+                <span id="subtitle">{{ props.item }}</span>
             </div>
+            <div class="header-right">
+            </div>
+        </template>
 
-            <!-- 右侧内容：Badge + 按钮 -->
-            <div class="right-group">
-                <span :class="`badge ${panelTag}`">{{ props.type }}</span>
-                <button type="button" class="btn btn-sm btn-info" @click="$emit('close')">关闭</button>
+        <!-- 内容 -->
+        <div class="dialog-content">
+            <div>
+                <b>测试内容：</b>
+                <span class="test-content" v-html="props.content"></span>
             </div>
-        </div>
-        <div class="panel-body">
-            <b>测试内容：</b>
-            <span class="content" v-html="props.content"></span>
+            <el-divider />
             <div v-if="props.remark">
-                <hr>
                 <b>备注：</b>
-                <span class="remark" v-html="props.remark"></span>
+                <span class="test-remark" v-html="props.remark"></span>
+                <el-divider />
             </div>
-            <hr>
-            <div class="image-container">
-                <el-image style="width: 300px; height: 400px;" :src="props.images[0]" :preview-src-list="props.images"
-                    show-progress fit="cover" :initial-index="0" preview-teleported="true" />
-                <span class="badge badge-primary image-counter" v-if="props.images.length > 1">
-                    {{ props.images.length }}
-                </span>
-            </div>
-        </div>
-        <div class="panel-footer">
-            <div class="row show-grid">
-                <span class="col-sm-3">{{ props.start }}</span>
-                <span class="col-sm-3">{{ props.end }}</span>
-                <span class="col-sm-3 col-sm-offset-3 ">{{ props.time }}</span>
+            <div class="test-images">
+                <!-- 展开显示图片 -->
+                <el-image v-for="(image, index) in props.images" :key="index" :src="image" :zoom-rate="1.2"
+                    :max-scale="7" :min-scale="0.2" :preview-src-list="props.images" :initial-index="index" fit="cover"
+                    class="image-item" :show-progress="true" />
             </div>
         </div>
-        <hr>
-        <div class="panel-progress">
-            <span class="progress-text">【{{ currentProgress }}/{{ totalItem }}】</span>
-
-            <div class="progress-box">
-                <div class="progress progress-striped">
-                <div :style="{ width: currentProgress / totalItem * 100 + '%' }"
-                    class="progress-bar progress-bar-success">
+        <template #footer>
+            <div class="dialog-footer">
+                <el-progress :percentage="currentPercent" color="#67c23a"
+                    :stroke-width="15">
+                    <span>{{ props.currentProgress }}页/{{ props.totalItem }}页</span>
+                </el-progress>
+                <div class="button-group">
+                    <el-button type="primary" @click="showWaterInfo">查看储水信息</el-button>
+                    <el-button type="danger" @click="dialogVisible = false">关闭</el-button>
                 </div>
             </div>
-            </div>
-
-            <button type="button" class="btn btn-primary btn-xs checkwater" @click="showWaterInfo()">
-                检查储水
-            </button>
-        </div>
-    </div>
+        </template>
+    </el-dialog>
 </template>
 
 <style scoped>
-.panel {
-    border: 1px solid #e4e4e4;
-    border-radius: 8px;
-    border-top: 4px solid;
-    position: fixed;
-    width: 70%;
-    height: 700px;
-    top: 100px;
-    left: 15%;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    z-index: 1000;
-    display: flex;
-    flex-direction: column;
-}
-
-.panel-heading {
-    padding: 16px 20px;
-    background-color: #f5f5f5;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    /* 左右对齐 */
-}
-
-.title-group {
-    display: flex;
-    align-items: center;
-}
-
-.system-title {
-    font-size: 16px;
-    font-weight: bold;
-    color: #333;
-}
-
-.item-title {
-    margin-left: 10px;
-    color: #666;
-}
-
-.right-group {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    /* badge 和按钮之间的间距 */
-}
-
-.panel-body {
-    padding: 20px;
-    flex: 1;
-    overflow-y: auto;
-}
-
-.panel-body :deep(b) {
+.dialog-content :deep(b) {
     font-size: 16px;
     color: black;
 }
 
-.image-container {
-    position: relative;
+.header-left {
     display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.image-counter {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 14px;
-}
-
-.content {
-    margin-bottom: 15px;
-    line-height: 1.5;
-}
-
-.time-info {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 15px;
-    /* background-color: #fafafa; */
-}
-
-.time-range,
-.duration {
-    display: flex;
-    align-items: center;
-    color: #666;
-}
-
-.time-range i,
-.duration i {
-    margin-right: 5px;
-}
-
-.panel-progress {
-    display: inline-flex;
     flex-direction: row;
-    flex-wrap: nowrap;
-    justify-content: space-around;
-    align-items: flex-start;
+    align-items: flex-end;
 }
 
-.progress-box {
-    width: 50%;
+#subtitle {
+    margin-left: 10px;
 }
 
-.progress-text {
-    font-size: 16px;
+.image-item {
+    width: 22.5%;
+    margin: 3px;
 }
 
-.checkwater {
-    font-size: 16px;
+.dialog-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
 }
 
-.badge {
-    font-size: 14px;
-    border-radius: 0px;
+.el-progress {
+    flex-grow: 1;
+    margin-right: 12px;
+}
+
+.button-group {
+    display: flex;
+    gap: 8px;
 }
 </style>

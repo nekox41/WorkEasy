@@ -8,7 +8,7 @@ const submissionTime = document.querySelector("#taskAudit > div:nth-child(16) > 
 // 用于Panel的数据
 const dataList = ref([]);
 const dataIndex = ref(0);
-const isActivate = ref(false);
+const dialogVisible = ref(false);
 const isLoading = ref(false);
 const pageData = ref([]);
 
@@ -142,7 +142,7 @@ onMounted(async () => {
 
     document.addEventListener("keydown", async (event) => {
         // 如果面板未打开，直接返回
-        if (!isActivate.value || document.querySelector('.el-image-viewer__wrapper')) {
+        if (!dialogVisible.value || document.querySelector('.el-image-viewer__wrapper')) {
             return;
         }
 
@@ -179,20 +179,20 @@ onMounted(async () => {
 </script>
 
 <template>
-    <Panel v-bind="{
+    <Panel
+    v-model:dialogVisible="dialogVisible"
+    v-bind="{
         ...dataList[dataIndex],
         currentProgress,
-        totalItem
-    }" v-if="isActivate" @close="isActivate = false" />
-    <button class="btn btn-w-m btn-primary" @click="isActivate = true" type="button">一键检查</button>
+        totalItem,
+    }"/>
+    <button class="btn btn-w-m btn-primary" @click="dialogVisible = true" type="button">一键检查</button>
 
     <Teleport to="body">
         <div class="progress-container" v-if="isLoading">
-            <span class="alert alert-info">数据加载中...</span>
+            <el-alert title="Success alert" type="success" center>数据加载中...</el-alert>
             <hr>
-            <div class="progress progress-striped">
-                <div :style="{ width: progressW + '%' }" class="progress-bar progress-bar-success"></div>
-            </div>
+            <el-progress :percentage="progressW" :stroke-width="15" />
         </div>
     </Teleport>
 

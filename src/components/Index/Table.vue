@@ -1,61 +1,80 @@
 <template>
     <div class="kanban">
-        <table class="table table-bordered table-hover">
-            <thead>
-                <tr class="long-tr">
-                    <th rowspan="2">项目数量</th>
-                    <th colspan="3">计划</th>
-                    <th colspan="3">已下发计划</th>
-                </tr>
-                <tr class="long-tr">
-                    <th>未创建</th>
-                    <th>未下发</th>
-                    <th>未完成</th>
-                    <th>待审核</th>
-                    <th>待生成</th>
-                    <th>待备案</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr class="long-td">
-                    <td>{{ tableData.total }}</td>
-                    <td>{{ tableData.uncreated }}</td>
-                    <td>{{ tableData.unissued }}</td>
-                    <td>{{ tableData.unfinished }}</td>
-                    <td>{{ tableData.unchecked }}</td>
-                    <td>
-                        <el-button text @click="showUngenerated">
-                            {{ tableData.ungenerated }}
-                        </el-button>
-                    </td>
-                    <td>{{ tableData.unrecorded }}</td>
-                </tr>
-            </tbody>
-        </table>
-        <div class="alert alert-warning tips">
-            <ul>
-                <li>由于计划会统计非维保项目，即将到期项目，所以通常比总项目数量要多。总项目数量是本月应出报告数量，更具参考价值。</li>
-            </ul>
-        </div>
-        <div class="alert alert-danger tips">
-            <span>助手尚在实验中，不要盲目相信。建议每间隔两天手动检查一次项目状况。</span>
-        </div>
-    </div>
-    <el-dialog
-        v-model="dialogVisible"
-        top="20vh"
-        width="60%">
-        <el-table :data="generatable" stripe>
-            <el-table-column prop="contract_name" label="项目名"/>
-            <el-table-column prop="plan_name" label="计划"/>
-            <el-table-column prop="commit_time" label="提交时间"/>
+        <el-table :data="tableDataArray" border style="width: 100%">
+            <!-- 表头 -->
+            <el-table-column label="项目数量" :render-header="renderMergedHeader">
+                <template #default>
+                    <span>{{ tableData.total }}</span>
+                </template>
+            </el-table-column>
+
+            <!-- 计划 -->
+            <el-table-column label="计划">
+                <el-table-column label="未创建">
+                    <template #default>
+                        <span>{{ tableData.uncreated }}</span>
+                    </template>
+                </el-table-column>
+                <el-table-column label="未下发">
+                    <template #default>
+                        <span>{{ tableData.unissued }}</span>
+                    </template>
+                </el-table-column>
+                <el-table-column label="未完成">
+                    <template #default>
+                        <span>{{ tableData.unfinished }}</span>
+                    </template>
+                </el-table-column>
+            </el-table-column>
+
+            <!-- 已下发计划 -->
+            <el-table-column label="已下发计划">
+                <el-table-column label="待审核">
+                    <template #default>
+                        <span>{{ tableData.unchecked }}</span>
+                    </template>
+                </el-table-column>
+                <el-table-column label="待生成">
+                    <template #default>
+                        <el-button text @click="showUngenerated">{{ tableData.ungenerated }}</el-button>
+                    </template>
+                </el-table-column>
+                <el-table-column label="待备案">
+                    <template #default>
+                        <span>{{ tableData.unrecorded }}</span>
+                    </template>
+                </el-table-column>
+            </el-table-column>
         </el-table>
-    </el-dialog>
+
+        <!-- 使用 el-alert 替代原生 alert -->
+        <el-alert title="由于计划会统计非维保项目，即将到期项目，所以通常比总项目数量要多。总项目数量是本月应出报告数量，更具参考价值。" type="warning" effect="dark" show-icon
+            :closable="false" style="margin: 10px auto; max-width: 60%" />
+
+        <el-alert title="助手尚在实验中，不要盲目相信。建议每间隔两天手动检查一次项目状况。" type="error" effect="dark" show-icon :closable="false"
+            style="margin: 10px auto; max-width: 60%" />
+
+        <!-- 弹窗 -->
+        <el-dialog v-model="dialogVisible" top="20vh" width="60%">
+            <el-table :data="generatable" stripe>
+                <el-table-column prop="contract_name" label="项目名" />
+                <el-table-column prop="plan_name" label="计划" />
+                <el-table-column prop="commit_time" label="提交时间" />
+            </el-table>
+        </el-dialog>
+    </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { getUnrecordedProject, getUncreatedProject, getUnissuedProject, getUnfinishedProject, getUncheckedProject, getUngeneratedProject } from '../../api/Index/table'
+import { ref, computed, onMounted } from 'vue'
+import {
+    getUnrecordedProject,
+    getUncreatedProject,
+    getUnissuedProject,
+    getUnfinishedProject,
+    getUncheckedProject,
+    getUngeneratedProject
+} from '../../api/Index/table'
 
 const tableData = ref({
     total: 0,
@@ -64,72 +83,71 @@ const tableData = ref({
     unfinished: 0,
     unchecked: 0,
     ungenerated: 0,
-    unrecorded: 0,
-});
-const dialogVisible = ref(false);
-const generatable = ref([]);
+    unrecorded: 0
+})
+
+const dialogVisible = ref(false)
+const generatable = ref([])
+
+// 模拟一行数据用于 el-table 渲染
+const tableDataArray = computed(() => [tableData.value])
+
 async function fetchData() {
     try {
-        tableData.value.total = parseInt(document.querySelector("body > div.example-wrap > div > table > tbody > tr > td:nth-child(5) > a").textContent)
+        const element = document.querySelector("body > div.example-wrap > div > table > tbody > tr > td:nth-child(5) > a")
+        if (element) {
+            tableData.value.total = parseInt(element.textContent)
+        }
 
-        const uncreatedRes = await getUncreatedProject();
+        const uncreatedRes = await getUncreatedProject()
         if (uncreatedRes && uncreatedRes.page_str) {
-            const match = uncreatedRes.page_str.match(/共(\d+)条$/);
+            const match = uncreatedRes.page_str.match(/共(\d+)条$/)
             if (match) {
-                tableData.value.uncreated = parseInt(match[1]);
-            } else {
-                console.error('未能从page_str中提取数字：', uncreatedRes.page_str);
+                tableData.value.uncreated = parseInt(match[1])
             }
         }
 
-        const unissuedRes = await getUnissuedProject();
+        const unissuedRes = await getUnissuedProject()
         if (unissuedRes && unissuedRes.page_str) {
-            const match = unissuedRes.page_str.match(/共(\d+)条$/);
+            const match = unissuedRes.page_str.match(/共(\d+)条$/)
             if (match) {
-                tableData.value.unissued = parseInt(match[1]);
-            } else {
-                console.error('未能从page_str中提取数字：', unissuedRes.page_str);
+                tableData.value.unissued = parseInt(match[1])
             }
         }
 
-        const unfinishedRes = await getUnfinishedProject();
+        const unfinishedRes = await getUnfinishedProject()
         if (unfinishedRes && unfinishedRes.page_str) {
-            const match = unfinishedRes.page_str.match(/共(\d+)条$/);
+            const match = unfinishedRes.page_str.match(/共(\d+)条$/)
             if (match) {
-                tableData.value.unfinished = parseInt(match[1]);
-            } else {
-                console.error('未能从page_str中提取数字：', unfinishedRes.page_str);
+                tableData.value.unfinished = parseInt(match[1])
             }
         }
 
-        const uncheckedRes = await getUncheckedProject();
-        tableData.value.unchecked = uncheckedRes.total;
+        const uncheckedRes = await getUncheckedProject()
+        tableData.value.unchecked = uncheckedRes.total
 
-        generatable.value = await getUngeneratedProject();
+        generatable.value = await getUngeneratedProject()
         tableData.value.ungenerated = generatable.value.length
-        console.log(tableData.value.ungenerated);
-        const unrecordedRes = await getUnrecordedProject();
+
+        const unrecordedRes = await getUnrecordedProject()
         if (unrecordedRes && unrecordedRes.page_str) {
-            const match = unrecordedRes.page_str.match(/共(\d+)条$/);
+            const match = unrecordedRes.page_str.match(/共(\d+)条$/)
             if (match) {
-                tableData.value.unrecorded = parseInt(match[1]);
-            } else {
-                console.error('未能从page_str中提取数字：', unrecordedRes.page_str);
+                tableData.value.unrecorded = parseInt(match[1])
             }
         }
     } catch (error) {
-        console.error('获取项目状态数据失败：', error);
+        console.error('获取项目状态数据失败：', error)
     }
 }
 
 function showUngenerated() {
-    dialogVisible.value = true;
-
+    dialogVisible.value = true
 }
 
 onMounted(() => {
-    fetchData();
-});
+    fetchData()
+})
 </script>
 
 <style>
@@ -137,5 +155,9 @@ onMounted(() => {
     width: 60%;
     margin: 0 auto;
     margin-top: 10px;
+}
+
+.el-table .cell {
+    text-align: center;
 }
 </style>
