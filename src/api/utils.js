@@ -64,9 +64,20 @@ async function getWaterInfo(name) {
  * @param {string} headerName 操作员，默认为空
  * @returns {{Nowpage: number, allpage: number, list: Array<Object>, page_str: string, total: number}}
  */
-async function getTaskList(page = 1, startDate = `${formattedDate}-01`, projectName = '', taskType = '0', taskStatus = '0', headerName = '') {
+async function getTaskList({ 
+    page = 1, 
+    startDate = `${formattedDate}-01`,
+    projectName = '',
+    taskType = '0',
+    taskStatus = '0',
+    headerName = '' 
+} = {}) {
     // 请求列表数据
-    const res = await axios.get(BASE_URL + `/admin/task/index.html?page=${page}&key=${startDate}&key3[]=${taskStatus}&key4=${projectName}&key5=${taskType}&key6=0&header_name=${headerName}`);
+    const res = await axios.get(BASE_URL + `/admin/task/index.html?page=${page}&key=${startDate}&key3[]=${taskStatus}&key4=${projectName}&key5=${taskType}&key6=0&header_name=${headerName}`
+        , {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        }
+    );
     if (res.status === 200) {
         return res.data;
     }
@@ -83,7 +94,11 @@ async function getTaskList(page = 1, startDate = `${formattedDate}-01`, projectN
  *   - 失败或异常时返回null（当前实现未显式处理异常情况）
  */
 async function getProjectByContractID(contract_id) {
-    const res = await axios.get(BASE_URL + `/admin/contract/index.html?page=1&get_contract_id=${contract_id}`)
+    const res = await axios.get(BASE_URL + `/admin/contract/index.html?page=1&get_contract_id=${contract_id}`,
+        {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        }
+    )
     if (res.status === 200) {
         return res.data;
     }

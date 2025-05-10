@@ -14,10 +14,11 @@ export default defineConfig({
         match: ['*://*.xmf119.cn/*'],
         connect: ['gitee.com'],
         description: '添加一键退回按钮；修复进度条Bug',
-        version: '2.3',
+        version: '2.3.1',
         author: 'aameow',
         "run-at": "document-end",
-        updateURL: "https://gitee.com/nekox41/work-easy/raw/main/dist/workeasy.user.js"
+        updateURL: "https://gitee.com/nekox41/work-easy/raw/main/dist/workeasy.user.js",
+        downloadURL: "https://gitee.com/nekox41/work-easy/raw/main/dist/workeasy.user.txt"
       },
       build: {
         externalGlobals: {

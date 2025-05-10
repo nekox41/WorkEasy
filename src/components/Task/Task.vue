@@ -135,17 +135,17 @@ async function loadAllData() {
 }
 
 // 退回任务
-function taskGoBack() {
+async function taskGoBack() {
     const form = document.querySelector("#taskAudit");
     form.task_status.value = "-1"; // -1 = 审核不通过；6 = 审核通过
     form.mark.value = "修改"; // 备注
     // 获取项目负责人
-    const taskData = getTaskList({
+    const taskData = await getTaskList({
         page: 1,
         projectName: document.querySelector("#taskAudit > div:nth-child(6) > div > input").value
     })
     const contractId = taskData.list[0].contract_id
-    const projectData = getProjectByContractID(contractId)
+    const projectData = await getProjectByContractID(contractId)
     form.audit_user_name.value = projectData.list[0].project_leader_name; // 项目负责人
     form.submit(); // 提交表单
 }
@@ -204,7 +204,16 @@ onMounted(async () => {
         totalItem,
     }" />
     <el-button @click="dialogVisible = true" type="primary">一键检查</el-button>
-    <el-button @click="taskGoBack" type="primary">退回任务</el-button>
+    <el-popconfirm
+        class="box-item"
+        title="是否确认退回？"
+        placement="top"
+        @confirm="taskGoBack"
+      >
+      <template #reference>
+        <el-button type="danger">退回任务</el-button>
+      </template>
+    </el-popconfirm>
     <Teleport to="body">
         <div class="progress-container" v-if="isLoading">
             <el-alert type="success" center>数据加载中...</el-alert>
