@@ -2,7 +2,7 @@
 import { onMounted, ref } from 'vue';
 import Panel from './Panel.vue';
 import { getTaskDetails, getImages } from "../../api/Task/task"
-import { ElMessage } from 'element-plus';
+import axios from 'axios';
 import { getTaskList, getProjectByContractID } from '../../api/utils';
 
 const submissionTime = document.querySelector("#taskAudit > div:nth-child(16) > div > input").value
@@ -137,17 +137,57 @@ async function loadAllData() {
 // 退回任务
 async function taskGoBack() {
     const form = document.querySelector("#taskAudit");
-    form.task_status.value = "-1"; // -1 = 审核不通过；6 = 审核通过
-    form.mark.value = "修改"; // 备注
-    // 获取项目负责人
-    const taskData = await getTaskList({
-        page: 1,
-        projectName: document.querySelector("#taskAudit > div:nth-child(6) > div > input").value
-    })
-    const contractId = taskData.list[0].contract_id
-    const projectData = await getProjectByContractID(contractId)
-    form.audit_user_name.value = projectData.list[0].project_leader_name; // 项目负责人
-    form.submit(); // 提交表单
+    if (!form) return alert("表单未找到");
+
+    const taskId = form.id.value;
+    const taskType = form.task_type.value;
+
+    // 获取项目名称（避免硬编码选择器）
+    const projectNameInput = document.querySelector("#taskAudit > div:nth-child(6) > div > input");
+    const projectName = projectNameInput?.value.trim();
+    if (!projectName) return alert("项目名称不能为空");
+
+    try {
+        const taskData = await getTaskList({
+            page: 1,
+            projectName
+        });
+
+        if (!taskData?.list?.length) {
+            return alert("未找到相关任务数据");
+        }
+
+        const contractId = taskData.list[0].contract_id;
+
+        const projectData = await getProjectByContractID(contractId);
+
+        if (!projectData?.list?.length) {
+            return alert("未找到对应项目负责人信息");
+        }
+
+        const auditUserName = projectData.list[0].project_leader_name;
+        if (!auditUserName) {
+            return alert("项目负责人姓名为空");
+        }
+
+        await axios.post("/admin/task/taskaudit.html", {
+            id: taskId,
+            task_type: taskType,
+            task_status: "-1",
+            mark: "修改",
+            audit_user_name: auditUserName
+        },{
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                "X-Requested-With": "XMLHttpRequest"
+            }
+        });
+
+        alert("任务退回成功");
+    } catch (error) {
+        console.error("任务退回失败：", error);
+        alert("任务退回失败，请查看控制台日志");
+    }
 }
 
 

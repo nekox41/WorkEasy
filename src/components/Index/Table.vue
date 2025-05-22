@@ -55,7 +55,7 @@
             style="margin: 10px auto; max-width: 60%" />
 
         <!-- 弹窗 -->
-        <el-dialog v-model="dialogVisible" top="20vh" width="60%">
+        <el-dialog v-model="dialogVisible" top="20vh" width="60%" :append-to-body="true">
             <el-table :data="generatable" stripe>
                 <el-table-column prop="contract_name" label="项目名" />
                 <el-table-column prop="plan_name" label="计划" />

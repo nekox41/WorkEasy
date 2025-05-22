@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, computed, h } from 'vue'
+import { nextTick, computed, h, onMounted, onUnmounted } from 'vue'
 import { getWaterInfo } from '../../api/utils'
 import { ElNotification } from 'element-plus';
 
@@ -39,15 +39,40 @@ const currentPercent = computed(() => {
 })
 async function showWaterInfo() {
     const infoArray = await getWaterInfo(name);
-    console.log(infoArray);
-    infoArray.forEach(item => {
+    for (const item of infoArray) {
+        await nextTick();
         ElNotification({
             title: item.name,
             message: h('div', null, item.data.map(info => h('p', null, `${info.position}的${info.container_type_str}容量${info.capacity}m³`))),
             duration: 5000
-        })
-    })
+        });
+    }
 }
+
+// 监听键盘事件
+function handleKeyDown(event) {
+  if (!dialogVisible.value) return;
+
+  const key = event.key;
+
+  if (key === ' ') { // 空格键
+    event.preventDefault(); // 阻止页面滚动
+    const firstImage = document.querySelector('.el-image__preview');
+    if (firstImage) {
+      firstImage.click(); // 模拟点击第一张图片以打开预览
+    }
+  } else if (key === 'c') { // C 键
+    showWaterInfo();
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('keydown', handleKeyDown);
+});
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleKeyDown);
+});
 </script>
 
 <template>
@@ -60,6 +85,7 @@ async function showWaterInfo() {
                 <span id="subtitle">{{ props.item }}</span>
             </div>
             <div class="header-right">
+                <small>快捷键：空格=预览图 | C=储水信息 | <- 翻页 -></small>
             </div>
         </template>
 
