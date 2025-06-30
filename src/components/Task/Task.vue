@@ -4,6 +4,7 @@ import Panel from './Panel.vue';
 import { getTaskDetails, getImages } from "../../api/Task/task"
 import axios from 'axios';
 import { getTaskList, getProjectByContractID } from '../../api/utils';
+import murmurHash3 from 'murmurhash3js';
 
 const submissionTime = document.querySelector("#taskAudit > div:nth-child(16) > div > input").value
 
@@ -14,12 +15,11 @@ const dialogVisible = ref(false);
 const isLoading = ref(false);
 const pageData = ref([]); // 任务小项
 
-// 进度条控制
-const progressPercent = ref(0);
 const totalItem = ref(0);
 const currentProgress = ref(1);
+
 // 生成项目key
-const projectKey = document.querySelector("#taskAudit > div:nth-child(6) > div > input").value + "_" + document.querySelector("#taskAudit > div:nth-child(4) > div > input").value
+const projectKey = murmurHash3.x86.hash128(document.querySelector("#taskAudit > div:nth-child(6) > div > input").value + "_" + document.querySelector("#taskAudit > div:nth-child(4) > div > input").value)
 /**
  * 恢复30天内的缓存数据
  * @param {string} key - 缓存的键（项目名加上月份）
@@ -124,7 +124,6 @@ async function loadAllData() {
         try {
             const data = await getTaskDetails(pageData.value[i]);
             dataList.value.push(...data);
-            progressPercent.value = ((i + 1) / pageData.value.length * 100).toFixed(2);
             totalItem.value = dataList.value.length;
         } catch (error) {
             console.error(error);
@@ -254,13 +253,6 @@ onMounted(async () => {
         <el-button type="danger">退回任务</el-button>
       </template>
     </el-popconfirm>
-    <Teleport to="body">
-        <div class="progress-container" v-if="isLoading">
-            <el-alert type="success" center>数据加载中...</el-alert>
-            <hr>
-            <el-progress :percentage="progressPercent" :stroke-width="15" />
-        </div>
-    </Teleport>
 
 </template>
 
