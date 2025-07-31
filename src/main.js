@@ -3,6 +3,7 @@ import { createApp } from 'vue'
 import Welcome from './components/Index/Welcome.vue';
 import Table from './components/Index/Table.vue';
 import Task from './components/Task/Task.vue';
+import OpenReport from './components/Report/OpenReport.vue';
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 
@@ -31,11 +32,18 @@ if (document.URL.includes("/admin/task/taskInfo")) {
     // 展示任务信息
     const container = document.createElement('div');
     container.id = "app";
-    container.style.display = "block"
-    document.querySelector("#taskAudit > div:nth-child(21)").appendChild(container);
-    document.querySelector("#taskAudit > div:nth-child(21) > label").className = "col-sm-4 control-label"
-    document.querySelector("#taskAudit > div:nth-child(21) > label").textContent = "助手功能："
-    const app = createApp(Task)
+    document.body.appendChild(container);
+    const app = createApp(Task);
+    app.use(ElementPlus);
+    app.mount("#app");
+}
+
+// 报告页面
+if (document.URL.includes("/admin/reportmiddleware")) {
+    const container = document.createElement('div');
+    container.id = "app";
+    document.querySelector("body > div.wrapper.wrapper-content.animated.fadeInRight > div > div.ibox-content > div.row > div:nth-child(1) > form > div:nth-child(6)").appendChild(container);
+    const app = createApp(OpenReport)
     app.use(ElementPlus)
     app.mount("#app")
 }

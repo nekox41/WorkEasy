@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import monkey, { cdn, util } from 'vite-plugin-monkey';
+import path from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -13,8 +14,8 @@ export default defineConfig({
         namespace: 'npm/vite-plugin-monkey',
         match: ['*://*.xmf119.cn/*'],
         connect: ['gitee.com'],
-        description: '添加一键退回按钮；修复进度条Bug',
-        version: '2.3.1',
+        description: '修复若干bug',
+        version: '2.3.4',
         author: 'aameow',
         "run-at": "document-end",
         updateURL: "https://gitee.com/nekox41/work-easy/raw/main/dist/workeasy.user.js",
@@ -31,5 +32,10 @@ export default defineConfig({
         }
       },
     }),
-  ]
+  ],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    }
+  }
 });

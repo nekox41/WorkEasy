@@ -74,8 +74,8 @@ function saveToCache(key) {
 }
 
 async function getBaseData() {
-    const startTime = new Date(document.querySelector("#taskAudit > div:nth-child(14) > div > input").value);
-    const endTime = new Date(document.querySelector("#taskAudit > div:nth-child(16) > div > input").value);
+    const startTime = new Date(document.querySelector("#taskAudit").elements[13].value);
+    const endTime = new Date(document.querySelector("#taskAudit").elements[15].value);
     const timeDiff = endTime.getTime() - startTime.getTime();
 
     // 计算时间差的小时、分钟和秒
@@ -87,22 +87,22 @@ async function getBaseData() {
     dataList.value.push({
         system: "基本信息",
         item: "操作员自拍",
-        content: document.querySelector("#taskAudit > div:nth-child(18) > div > input").value,
-        start: document.querySelector("#taskAudit > div:nth-child(14) > div > input").value,
-        end: document.querySelector("#taskAudit > div:nth-child(16) > div > input").value,
+        content: document.querySelector("#taskAudit").elements[17].value,
+        start: startTime.toLocaleTimeString(),
+        end: endTime.toLocaleTimeString(),
         time: `${hours}小时${minutes}分钟${seconds}秒`,
-        images: await getImages(document.querySelector("#taskAudit > div:nth-child(20) > a").href),
+        images: await getImages(document.querySelectorAll("#taskAudit > div > a")[1].href),
         type: "基本信息"
     })
     // 控制器照片
     dataList.value.push({
         system: "基本信息",
         item: "控制器照片",
-        content: document.querySelector("#taskAudit > div:nth-child(19) > div > input").value,
-        start: document.querySelector("#taskAudit > div:nth-child(14) > div > input").value,
-        end: document.querySelector("#taskAudit > div:nth-child(16) > div > input").value,
+        content: document.querySelector("#taskAudit").elements[18].value,
+        start: startTime.toLocaleTimeString(),
+        end: endTime.toLocaleTimeString(),
         time: `${hours}小时${minutes}分钟${seconds}秒`,
-        images: await getImages(document.querySelector("#taskAudit > div:nth-child(19) > a").href),
+        images: await getImages(document.querySelectorAll("#taskAudit > div > a")[0].href),
         type: "基本信息"
     })
     // 签到照片
@@ -110,10 +110,10 @@ async function getBaseData() {
         system: "基本信息",
         item: "签到照片",
         content: "签到照片",
-        start: document.querySelector("#taskAudit > div:nth-child(14) > div > input").value,
-        end: document.querySelector("#taskAudit > div:nth-child(16) > div > input").value,
+        start: startTime.toLocaleTimeString(),
+        end: endTime.toLocaleTimeString(),
         time: `${hours}小时${minutes}分钟${seconds}秒`,
-        images: [document.querySelector("#taskAudit > div:nth-child(24) > div > a > img").src],
+        images: [document.querySelector("#taskAudit > div > div > a > img").src],
         type: "基本信息"
     })
 }
@@ -175,7 +175,7 @@ async function taskGoBack() {
             task_status: "-1",
             mark: "修改",
             audit_user_name: auditUserName
-        },{
+        }, {
             headers: {
                 "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
                 "X-Requested-With": "XMLHttpRequest"
@@ -197,7 +197,7 @@ onMounted(async () => {
     pageData.value = Array.from(document.querySelectorAll('.long-td')).map(line =>
         line.children[3].firstElementChild.href
     );
-
+    console.log(pageData.value)
     document.addEventListener("keydown", async (event) => {
         // 如果面板未打开，直接返回
         if (!dialogVisible.value || document.querySelector('.el-image-viewer__wrapper')) {
@@ -242,17 +242,14 @@ onMounted(async () => {
         currentProgress,
         totalItem,
     }" />
-    <el-button @click="dialogVisible = true" type="primary">一键检查</el-button>
-    <el-popconfirm
-        class="box-item"
-        title="是否确认退回？"
-        placement="top"
-        @confirm="taskGoBack"
-      >
-      <template #reference>
-        <el-button type="danger">退回任务</el-button>
-      </template>
-    </el-popconfirm>
+    <div class="fixed-right">
+        <el-button @click="dialogVisible = true" type="primary">一键检查</el-button>
+        <el-popconfirm class="box-item" title="是否确认退回？" placement="top" @confirm="taskGoBack">
+            <template #reference>
+                <el-button type="danger">退回任务</el-button>
+            </template>
+        </el-popconfirm>
+    </div>
 
 </template>
 
@@ -265,5 +262,18 @@ onMounted(async () => {
     left: 25%;
     color: black;
     width: 50%;
+}
+
+/* 添加样式部分 */
+.fixed-right {
+  position: fixed;
+  right: 0;
+  top: 50vh;
+  transform: translateY(-50%);
+  z-index: 9999; /* 确保按钮始终在最上层 */
+  display: flex;
+  flex-direction: column;
+  gap: 10px; /* 按钮间距 */
+  padding: 10px;
 }
 </style>

@@ -2,6 +2,7 @@
 import { nextTick, computed, h, onMounted, onUnmounted } from 'vue'
 import { getWaterInfo } from '../../api/utils'
 import { ElNotification } from 'element-plus';
+import { replaceUrl } from '../../api/util/sourceHelper';
 
 const props = defineProps({
     system: { type: String, required: true },
@@ -37,6 +38,11 @@ const currentPercent = computed(() => {
     const num = props.currentProgress / props.totalItem * 100;
     return num.toFixed(2);
 })
+
+const processedImages = computed(() => {
+    return props.images.map(image => replaceUrl(image))
+})
+
 async function showWaterInfo() {
     const infoArray = await getWaterInfo(name);
     for (const item of infoArray) {
@@ -103,8 +109,8 @@ onUnmounted(() => {
             </div>
             <div class="test-images">
                 <!-- 展开显示图片 -->
-                <el-image v-for="(image, index) in props.images" :key="index" :src="image" :zoom-rate="1.2"
-                    :max-scale="7" :min-scale="0.2" :preview-src-list="props.images" :initial-index="index" fit="cover"
+                <el-image v-for="(image, index) in processedImages" :key="index" :src="image" :zoom-rate="1.2"
+                    :max-scale="7" :min-scale="0.2" :preview-src-list="processedImages" :initial-index="index" fit="cover"
                     class="image-item" :show-progress="true" />
             </div>
         </div>
