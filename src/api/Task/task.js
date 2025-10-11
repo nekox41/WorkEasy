@@ -61,10 +61,37 @@ async function getImages(url) {
 }
 
 
-
+/**
+ * 解析任务列表页面HTML，返回任务及基本信息
+ * @param {string} html - 任务列表页面的HTML字符串
+ * @returns {{
+ *   taskName: string,
+ *   taskType: string,
+ *   projectName: string,
+ *   taskLeader: string,
+ *   taskParticipant: string,
+ *   taskDate: string,
+ *   taskAppointDate: string,
+ *   taskAcceptDate: string,
+ *   taskExecuteDate: string,
+ *   taskSubmitDate: string,
+ *   itemList: Array<{
+ *     itemId: string,
+ *     system: string,
+ *     checkContent: string,
+ *     itemDetailUrl: string,
+ *     itemResult: string
+ *   }>,
+ *   attachmentList: {
+ *     selfie: string,
+ *     controllerType: string,
+ *     checkImg: string
+ *   }
+ * }}
+ */
 function ParseTaskPage(html) {
     const parser = new DOMParser();
-    const doc = parser.parseFromString(html);
+    const doc = parser.parseFromString(html, 'text/html');
     // 获取任务列表
     const itemList = []
     doc.querySelectorAll(".long-td").forEach(item => {
@@ -112,9 +139,28 @@ function ParseTaskPage(html) {
     }
 }
 
+/**
+ * 解析任务详情HTML，返回任务详情数组
+ * @param {string} html - 任务详情页面的HTML字符串
+ * @returns {Array<{
+ *   subitemId: string,
+ *   system: string,
+ *   checkContent: string,
+ *   testContent: string,
+ *   testHtml: string,
+ *   wholeTest: string,
+ *   wholeTestHtml: string,
+ *   testResult: string,
+ *   startTime: string,
+ *   endTime: string,
+ *   testTime: string,
+ *   remark: string,
+ *   attachment: string
+ * }>}
+ */
 function ParseTaskDetail(html) {
     const parser = new DOMParser();
-    const doc = parser.parseFromString(html);
+    const doc = parser.parseFromString(html, 'text/html');
 
     const lines = doc.querySelectorAll('.long-td');
     const result = []
@@ -132,7 +178,7 @@ function ParseTaskDetail(html) {
             endTime: line.children[7].textContent,
             testTime: line.children[8].textContent,
             remark: line.children[9].textContent,
-            attachment: line.children[10].children[0].href
+            attachment: line.children[10].children[0] ? line.children[10].children[0].href : ''
         })
     })
 
@@ -142,4 +188,6 @@ function ParseTaskDetail(html) {
 export {
     getTaskDetails,
     getImages,
+    ParseTaskPage,
+    ParseTaskDetail
 };

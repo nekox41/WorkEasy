@@ -5,6 +5,7 @@ import Table from './components/Index/Table.vue';
 import Task from './components/Task/Task.vue';
 import OpenReport from './components/Report/OpenReport.vue';
 import PlanListStyle from './components/Task/PlanListStyle.vue';
+import GenerateReport from './components/Report/GenerateReport.vue';
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 
@@ -58,4 +59,10 @@ if (document.URL.includes("/admin/reportmiddleware")) {
 // 计划列表的样式优化
 if (document.URL.includes("/admin/contractplan/planlist")) {
     mountVueComponent(PlanListStyle, document.body);
+}
+
+// 报告生成
+if (document.URL.includes("/admin/report/index")) {
+    const target = document.querySelector("[name=admin_list_sea]");
+    mountVueComponent(GenerateReport, target);
 }
