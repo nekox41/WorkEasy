@@ -27,7 +27,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import { fetchAndOpenReport } from '@/api/reportService'
+import { fetchAndOpenReport } from '@/api/Report/reportService'
 import { ElMessage } from 'element-plus'
 const dialogVisible = ref(false)
 const textarea = ref('')
