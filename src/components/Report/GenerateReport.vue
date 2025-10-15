@@ -37,6 +37,8 @@ async function SetInfo() {
     const commentKey = hasFault ? "fault" : "normal";
     const commentText = GetComment(commentKey);
     document.querySelector("#explain").value = commentText;
+    // 选择所有计划
+    document.querySelector("[id=chk_all]").click()
 }
 
 

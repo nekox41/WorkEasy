@@ -48,7 +48,7 @@ if (document.URL.includes("/admin/task/taskInfo")) {
 
 // 报告页面
 if (document.URL.includes("/admin/reportmiddleware")) {
-    const reportFormArea = document.querySelector("body > div.wrapper.wrapper-content.animated.fadeInRight > div > div.ibox-content > div.row > div:nth-child(1) > form > div:nth-child(6)").appendChild(container);
+    const reportFormArea = document.querySelector("body > div.wrapper.wrapper-content.animated.fadeInRight > div > div.ibox-content > div.row > div:nth-child(1) > form > div:nth-child(6)");
     if (reportFormArea) {
         mountVueComponent(OpenReport, reportFormArea);
     } else {
