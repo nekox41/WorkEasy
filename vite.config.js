@@ -15,7 +15,7 @@ export default defineConfig({
         match: ['*://*.xmf119.cn/*'],
         connect: ['gitee.com'],
         description: '添加报告生成信息获取；添加计划列表样式',
-        version: '3.0.0',
+        version: '3.0.1',
         author: 'aameow',
         "run-at": "document-end",
         updateURL: "https://gitee.com/nekox41/work-easy/raw/main/dist/workeasy.user.js",

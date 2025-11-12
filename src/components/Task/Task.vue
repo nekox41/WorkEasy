@@ -228,11 +228,11 @@ onMounted(async () => {
             }
         }
     })
-
-    const restored = restoreFromCache(projectKey);
-    if (!restored) {
-        await loadAllData();
-    }
+    await loadAllData();
+    // const restored = restoreFromCache(projectKey);
+    // if (!restored) {
+    //     await loadAllData();
+    // }
 })
 </script>
 
