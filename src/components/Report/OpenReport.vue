@@ -29,67 +29,67 @@
 import { ref } from 'vue'
 import { fetchAndOpenReport } from '@/api/Report/reportService'
 import { ElMessage } from 'element-plus'
+
 const dialogVisible = ref(false)
 const textarea = ref('')
 
-// 获取当前月的起止时间
-function getCurrentMonthRange() {
-    const today = new Date()
-    const year = today.getFullYear()
-    const month = today.getMonth()
-
-    // 第一天
-    const firstDay = new Date(year, month, 1)
-    // 最后一天
-    const lastDay = new Date(year, month + 1, 0)
-
-    return [
-        formatDate(firstDay),
-        formatDate(lastDay)
-    ]
-}
-
-function getLastMonthRange() {
-    const today = new Date()
-    const year = today.getFullYear()
-    const month = today.getMonth()
-
-    // 第一天
-    const firstDay = new Date(year, month - 1, 1)
-    // 最后一天
-    const lastDay = new Date(year, month, 0)
-
-    return [
-        formatDate(firstDay),
-        formatDate(lastDay)
-    ]
-}
-
 // 格式化日期为 YYYY-MM-DD
 function formatDate(date) {
-    const y = date.getFullYear()
-    const m = String(date.getMonth() + 1).padStart(2, '0')
-    const d = String(date.getDate()).padStart(2, '0')
-    return `${y}-${m}-${d}`
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+// 获取当前月的起止时间
+function getCurrentMonthRange() {
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = today.getMonth()
+
+  const firstDay = new Date(year, month, 1)
+  const lastDay = new Date(year, month + 1, 0)
+
+  return [firstDay, lastDay]
+}
+
+// 获取上个月的起止时间
+function getLastMonthRange() {
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = today.getMonth()
+
+  const firstDay = new Date(year, month - 1, 1)
+  const lastDay = new Date(year, month, 0)
+
+  return [firstDay, lastDay]
 }
 
 function handleClick() {
-    textarea.value.trim().split("\n").forEach(item => {
-        fetchAndOpenReport(item, dateRange.value[0], dateRange.value[1])
-    })
-    ElMessage({
-        message: '处理完成',
-        type: 'success',
-    })
-    dialogVisible.value = false
+  // 确保日期被正确格式化后再传递
+  const startDate = dateRange.value[0] instanceof Date 
+    ? formatDate(dateRange.value[0]) 
+    : dateRange.value[0]
+  const endDate = dateRange.value[1] instanceof Date 
+    ? formatDate(dateRange.value[1]) 
+    : dateRange.value[1]
+  
+  textarea.value.trim().split("\n").forEach(item => {
+    fetchAndOpenReport(item, startDate, endDate)
+  })
+  ElMessage({
+    message: '处理完成',
+    type: 'success',
+  })
+  dialogVisible.value = false
 }
 
-const dateRange = ref(getCurrentMonthRange())
+const dateRange = ref(getCurrentMonthRange().map(formatDate))
 const shortcuts = [
-    {
-        text: "上个月",
-        value: getLastMonthRange(),
-    }
+  {
+    text: "上个月",
+    value: () => getLastMonthRange().map(formatDate),
+  }
 ]
 </script>
 

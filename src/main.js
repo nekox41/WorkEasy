@@ -32,12 +32,12 @@ if (document.URL.includes("/admin/index/indexpage.html")) {
     const welcomeApp = mountVueComponent(Welcome, document.body);
 
     // 信息看板
-    const tableTarget = document.querySelector("body > div.example-wrap > div")
-    if (tableTarget) {
-        mountVueComponent(Table, tableTarget);
-    } else {
-        console.error("无法找到信息看板容器")
-    }
+    // const tableTarget = document.querySelector("body > div.example-wrap > div")
+    // if (tableTarget) {
+    //     mountVueComponent(Table, tableTarget);
+    // } else {
+    //     console.error("无法找到信息看板容器")
+    // }
 }
 
 // 任务页面
