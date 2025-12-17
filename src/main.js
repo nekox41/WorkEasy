@@ -2,6 +2,7 @@
 import { createApp } from 'vue'
 import Welcome from './components/Index/Welcome.vue';
 import Table from './components/Index/Table.vue';
+import FloatingButton from './components/Index/FloatingButton.vue'; // 新增浮动按钮组件
 import Task from './components/Task/Task.vue';
 import OpenReport from './components/Report/OpenReport.vue';
 import PlanListStyle from './components/Task/PlanListStyle.vue';
@@ -31,13 +32,8 @@ if (document.URL.includes("/admin/index/indexpage.html")) {
     // 欢迎弹窗
     const welcomeApp = mountVueComponent(Welcome, document.body);
 
-    // 信息看板
-    // const tableTarget = document.querySelector("body > div.example-wrap > div")
-    // if (tableTarget) {
-    //     mountVueComponent(Table, tableTarget);
-    // } else {
-    //     console.error("无法找到信息看板容器")
-    // }
+    // 添加浮动按钮 - 直接添加到body，但使用不同的app ID避免冲突
+    mountVueComponent(FloatingButton, document.body, 'floating-button-app');
 }
 
 // 任务页面
