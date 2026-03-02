@@ -14,4 +14,20 @@ planList.forEach(item => {
         item.style.color = 'white';
     }
 })
+
+function changeDefaultSelect() {
+    console.log("开始搜索上月执行人员...")
+    const allLine = document.querySelectorAll('.long-td');
+    let firstMatch = null;
+    for (let i = 0; i < allLine.length; i++) {
+        if (allLine[i].children[1].textContent != "") {
+            firstMatch = allLine[i].children[1].textContent;
+            break;
+        }
+    }
+    console.log("找到上月执行人员：" + firstMatch );
+    localStorage.setItem('defaultSelect', firstMatch);
+    return;
+}
+changeDefaultSelect();
 </script>

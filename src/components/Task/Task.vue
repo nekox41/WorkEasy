@@ -189,6 +189,61 @@ async function taskGoBack() {
     }
 }
 
+// 通过任务
+async function taskPass() {
+    const form = document.querySelector("#taskAudit");
+    if (!form) return alert("表单未找到");
+
+    const taskId = form.id.value;
+    const taskType = form.task_type.value;
+
+    // 获取项目名称（避免硬编码选择器）
+    const projectNameInput = document.querySelector("#taskAudit > div:nth-child(6) > div > input");
+    const projectName = projectNameInput?.value.trim();
+    if (!projectName) return alert("项目名称不能为空");
+
+    try {
+        const taskData = await getTaskList({
+            page: 1,
+            projectName
+        });
+
+        if (!taskData?.list?.length) {
+            return alert("未找到相关任务数据");
+        }
+
+        const contractId = taskData.list[0].contract_id;
+
+        const projectData = await getProjectByContractID(contractId);
+
+        if (!projectData?.list?.length) {
+            return alert("未找到对应项目负责人信息");
+        }
+
+        const auditUserName = projectData.list[0].project_leader_name;
+        if (!auditUserName) {
+            return alert("项目负责人姓名为空");
+        }
+
+        await axios.post("/admin/task/taskaudit.html", {
+            id: taskId,
+            task_type: taskType,
+            task_status: "6",
+            mark: "通过",
+            audit_user_name: auditUserName
+        }, {
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                "X-Requested-With": "XMLHttpRequest"
+            }
+        });
+
+        alert("任务通过成功");
+    } catch (error) {
+        console.error("任务通过失败：", error);
+        alert("任务通过失败，请查看控制台日志");
+    }
+}
 
 onMounted(async () => {
     await getBaseData()
@@ -247,6 +302,11 @@ onMounted(async () => {
         <el-popconfirm class="box-item" title="是否确认退回？" placement="top" @confirm="taskGoBack">
             <template #reference>
                 <el-button type="danger">退回任务</el-button>
+            </template>
+        </el-popconfirm>
+        <el-popconfirm class="box-item" title="是否确认通过？" placement="top" @confirm="taskPass">
+            <template #reference>
+                <el-button type="success">通过任务</el-button>
             </template>
         </el-popconfirm>
     </div>

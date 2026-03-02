@@ -5,10 +5,11 @@ import Table from './components/Index/Table.vue';
 import FloatingButton from './components/Index/FloatingButton.vue'; // 新增浮动按钮组件
 import Task from './components/Task/Task.vue';
 import OpenReport from './components/Report/OpenReport.vue';
-import PlanListStyle from './components/Task/PlanListStyle.vue';
+import PlanListStyle from './components/Plan/PlanListStyle.vue';
 import GenerateReport from './components/Report/GenerateReport.vue';
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
+import DefaultSelected from './components/Plan/DefaultSelected.vue';
 
 const url = document.URL;
 
@@ -55,6 +56,11 @@ if (document.URL.includes("/admin/reportmiddleware")) {
 // 计划列表的样式优化
 if (document.URL.includes("/admin/contractplan/planlist")) {
     mountVueComponent(PlanListStyle, document.body);
+}
+
+// 下发任务
+if (document.URL.includes("/admin/contractplan/contractplandetail")) {
+    mountVueComponent(DefaultSelected, document.body);
 }
 
 // 报告生成
