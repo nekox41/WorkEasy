@@ -1,339 +1,171 @@
+<template>
+  <Panel
+    v-model:dialog-visible="dialogVisible"
+    v-bind="dataList[dataIndex] || emptyPanelData"
+    :current-progress="currentProgress"
+    :total-item="totalItem"
+  />
+  <div class="floating-buttons">
+    <el-button type="primary" @click="handleCheck">一键检查</el-button>
+    <el-button :loading="isLoading" :disabled="isDataLoaded" @click="loadAllData">{{ isDataLoaded ? '数据已加载' : '加载数据' }}</el-button>
+    <el-popconfirm title="是否确认退回？" placement="top" @confirm="taskGoBack">
+      <template #reference><el-button type="danger">退回任务</el-button></template>
+    </el-popconfirm>
+    <el-popconfirm title="是否确认通过？" placement="top" @confirm="taskPass">
+      <template #reference><el-button type="success">审核通过</el-button></template>
+    </el-popconfirm>
+  </div>
+  <Teleport to="body">
+    <div v-if="isLoading && !dialogVisible" class="vertical-progress-wrapper">
+      <div class="vertical-progress-track"><div class="vertical-progress-fill" :style="{ height: progressPercent + '%' }"></div></div>
+      <div class="vertical-progress-text">{{ progressPercent }}%</div>
+    </div>
+  </Teleport>
+</template>
+
 <script setup>
-import { onMounted, ref } from 'vue';
-import Panel from './Panel.vue';
-import { getTaskDetails, getImages } from "../../api/Task/task"
-import axios from 'axios';
-import { getTaskList, getProjectByContractID } from '../../api/utils';
-import murmurHash3 from 'murmurhash3js';
+import { onMounted, onBeforeUnmount, ref, watch } from 'vue'
+import { ElMessage } from 'element-plus'
+import Panel from './Panel.vue'
+import { getImages, getTaskDetails } from '../../api/Task/task'
+import { getTaskList, getProjectByContractID } from '../../api/utils'
 
-const submissionTime = document.querySelector("#taskAudit > div:nth-child(16) > div > input").value
-
-// 用于Panel的数据
-const dataList = ref([]);
-const dataIndex = ref(0);
-const dialogVisible = ref(false);
-const isLoading = ref(false);
-const pageData = ref([]); // 任务小项
-
-const totalItem = ref(0);
-const currentProgress = ref(1);
-
-// 生成项目key
-const projectKey = murmurHash3.x86.hash128(document.querySelector("#taskAudit > div:nth-child(6) > div > input").value + "_" + document.querySelector("#taskAudit > div:nth-child(4) > div > input").value)
-/**
- * 恢复30天内的缓存数据
- * @param {string} key - 缓存的键（项目名加上月份）
- * @returns 
- */
-function restoreFromCache(key) {
-    const cachedItem = localStorage.getItem(key);
-    if (!cachedItem) return false;
-
-    try {
-        const { dataList: data, timestamp, rightLength, submissionTime: cacheSubmissionTime } = JSON.parse(cachedItem);
-        const now = Date.now();
-
-        // 缓存过期（30天）
-        if (now - timestamp > 24 * 60 * 60 * 1000 * 30) {
-            console.log('缓存过期')
-            localStorage.removeItem(key);
-            return false;
-        }
-        if (submissionTime !== cacheSubmissionTime) {
-            console.log('任务已经重新提交')
-            localStorage.removeItem(key);
-            return false;
-        }
-        // 验证缓存
-        if (data.length !== rightLength) {
-            console.log('缓存错误')
-            localStorage.removeItem(key);
-            return false;
-        }
-        dataList.value = data;
-        totalItem.value = dataList.value.length;
-        return true;
-    } catch (e) {
-        console.error('缓存解析失败', e);
-        return false;
-    }
-}
-
-/**
- * 
- * @param {string} key - 缓存的键（项目名加上月份）
- */
-function saveToCache(key) {
-    const cacheData = {
-        dataList: dataList.value,
-        timestamp: Date.now(),
-        rightLength: totalItem.value,
-        submissionTime: submissionTime
-    };
-    localStorage.setItem(key, JSON.stringify(cacheData));
-}
+const dataList = ref([])
+const dataIndex = ref(0)
+const dialogVisible = ref(false)
+const isLoading = ref(false)
+const pageData = ref([])
+const isDataLoaded = ref(false)
+const progressPercent = ref(0)
+const totalItem = ref(0)
+const currentProgress = ref(1)
+const elapsedTime = ref(0)
+let timerInterval = null
+let keydownHandler = null
+const emptyPanelData = { system:'', item:'', content:'', start:'', end:'', time:'', images:[], type:'', remark:'' }
 
 async function getBaseData() {
-    const startTime = new Date(document.querySelector("#taskAudit").elements[13].value);
-    const endTime = new Date(document.querySelector("#taskAudit").elements[15].value);
-    const timeDiff = endTime.getTime() - startTime.getTime();
-
-    // 计算时间差的小时、分钟和秒
-    const hours = Math.floor(timeDiff / (1000 * 60 * 60));
-    const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
-
-    // 操作员照片
-    dataList.value.push({
-        system: "基本信息",
-        item: "操作员自拍",
-        content: document.querySelector("#taskAudit").elements[17].value,
-        start: startTime.toLocaleTimeString(),
-        end: endTime.toLocaleTimeString(),
-        time: `${hours}小时${minutes}分钟${seconds}秒`,
-        images: await getImages(document.querySelectorAll("#taskAudit > div > a")[1].href),
-        type: "基本信息"
-    })
-    // 控制器照片
-    dataList.value.push({
-        system: "基本信息",
-        item: "控制器照片",
-        content: document.querySelector("#taskAudit").elements[18].value,
-        start: startTime.toLocaleTimeString(),
-        end: endTime.toLocaleTimeString(),
-        time: `${hours}小时${minutes}分钟${seconds}秒`,
-        images: await getImages(document.querySelectorAll("#taskAudit > div > a")[0].href),
-        type: "基本信息"
-    })
-    // 签到照片
-    dataList.value.push({
-        system: "基本信息",
-        item: "签到照片",
-        content: "签到照片",
-        start: startTime.toLocaleTimeString(),
-        end: endTime.toLocaleTimeString(),
-        time: `${hours}小时${minutes}分钟${seconds}秒`,
-        images: [document.querySelector("#taskAudit > div > div > a > img").src],
-        type: "基本信息"
-    })
+  const form = document.querySelector('#taskAudit')
+  if (!form) return
+  const startValue = form.querySelector('div:nth-child(14) input')?.value || ''
+  const endValue = form.querySelector('div:nth-child(16) input')?.value || ''
+  const diff = new Date(endValue).getTime() - new Date(startValue).getTime()
+  const hours = Math.floor(diff / 3600000)
+  const minutes = Math.floor(diff % 3600000 / 60000)
+  const seconds = Math.floor(diff % 60000 / 1000)
+  const time = `${hours}小时${minutes}分钟${seconds}秒`
+  const links = [form.querySelector('div:nth-child(20) > a')?.href, form.querySelector('div:nth-child(19) > a')?.href]
+  const sign = form.querySelector('div:nth-child(24) > div > a > img')?.src
+  const [operatorImages, controllerImages] = await Promise.all([
+    links[0] ? getImages(links[0]) : Promise.resolve([]),
+    links[1] ? getImages(links[1]) : Promise.resolve([])
+  ])
+  dataList.value.push(
+    { system:'基本信息', item:'操作员自拍', content:form.querySelector('div:nth-child(18) input')?.value || '', start:startValue, end:endValue, time, images:operatorImages, type:'基本信息' },
+    { system:'基本信息', item:'控制器照片', content:form.querySelector('div:nth-child(19) input')?.value || '', start:startValue, end:endValue, time, images:controllerImages, type:'基本信息' },
+    { system:'基本信息', item:'签到照片', content:'签到照片', start:startValue, end:endValue, time, images:sign ? [sign] : [], type:'基本信息' }
+  )
 }
-
 async function loadAllData() {
-    isLoading.value = true;
-    for (let i = 0; i < pageData.value.length; i++) {
-        try {
-            const data = await getTaskDetails(pageData.value[i]);
-            dataList.value.push(...data);
-            totalItem.value = dataList.value.length;
-        } catch (error) {
-            console.error(error);
-        }
-    }
-    saveToCache(projectKey);
-    isLoading.value = false;
+  if (isLoading.value || isDataLoaded.value) return
+  isLoading.value = true
+  progressPercent.value = 0
+  let completed = 0
+  try {
+    const results = await Promise.all(pageData.value.map(async url => {
+      try { return await getTaskDetails(url) }
+      catch (error) { console.error(error); return [] }
+      finally {
+        completed += 1
+        progressPercent.value = pageData.value.length ? Number((completed / pageData.value.length * 100).toFixed(2)) : 100
+      }
+    }))
+    dataList.value.push(...results.flat())
+    totalItem.value = dataList.value.length
+    isDataLoaded.value = true
+  } catch (error) {
+    console.error('加载任务数据失败：', error)
+    ElMessage.error(`加载任务数据失败：${error.message}`)
+  } finally { isLoading.value = false }
 }
-
-// 退回任务
-async function taskGoBack() {
-    const form = document.querySelector("#taskAudit");
-    if (!form) return alert("表单未找到");
-
-    const taskId = form.id.value;
-    const taskType = form.task_type.value;
-
-    // 获取项目名称（避免硬编码选择器）
-    const projectNameInput = document.querySelector("#taskAudit > div:nth-child(6) > div > input");
-    const projectName = projectNameInput?.value.trim();
-    if (!projectName) return alert("项目名称不能为空");
-
-    try {
-        const taskData = await getTaskList({
-            page: 1,
-            projectName
-        });
-
-        if (!taskData?.list?.length) {
-            return alert("未找到相关任务数据");
-        }
-
-        const contractId = taskData.list[0].contract_id;
-
-        const projectData = await getProjectByContractID(contractId);
-
-        if (!projectData?.list?.length) {
-            return alert("未找到对应项目负责人信息");
-        }
-
-        const auditUserName = projectData.list[0].project_leader_name;
-        if (!auditUserName) {
-            return alert("项目负责人姓名为空");
-        }
-
-        await axios.post("/admin/task/taskaudit.html", {
-            id: taskId,
-            task_type: taskType,
-            task_status: "-1",
-            mark: "修改",
-            audit_user_name: auditUserName
-        }, {
-            headers: {
-                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-                "X-Requested-With": "XMLHttpRequest"
-            }
-        });
-
-        alert("任务退回成功");
-    } catch (error) {
-        console.error("任务退回失败：", error);
-        alert("任务退回失败，请查看控制台日志");
-    }
-}
-
-// 通过任务
-async function taskPass() {
-    const form = document.querySelector("#taskAudit");
-    if (!form) return alert("表单未找到");
-
-    const taskId = form.id.value;
-    const taskType = form.task_type.value;
-
-    // 获取项目名称（避免硬编码选择器）
-    const projectNameInput = document.querySelector("#taskAudit > div:nth-child(6) > div > input");
-    const projectName = projectNameInput?.value.trim();
-    if (!projectName) return alert("项目名称不能为空");
-
-    try {
-        const taskData = await getTaskList({
-            page: 1,
-            projectName
-        });
-
-        if (!taskData?.list?.length) {
-            return alert("未找到相关任务数据");
-        }
-
-        const contractId = taskData.list[0].contract_id;
-
-        const projectData = await getProjectByContractID(contractId);
-
-        if (!projectData?.list?.length) {
-            return alert("未找到对应项目负责人信息");
-        }
-
-        const auditUserName = projectData.list[0].project_leader_name;
-        if (!auditUserName) {
-            return alert("项目负责人姓名为空");
-        }
-
-        await axios.post("/admin/task/taskaudit.html", {
-            id: taskId,
-            task_type: taskType,
-            task_status: "6",
-            mark: "通过",
-            audit_user_name: auditUserName
-        }, {
-            headers: {
-                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-                "X-Requested-With": "XMLHttpRequest"
-            }
-        });
-
-        alert("任务通过成功");
-    } catch (error) {
-        console.error("任务通过失败：", error);
-        alert("任务通过失败，请查看控制台日志");
-    }
-}
-
-onMounted(async () => {
-    await getBaseData()
-
-    // 初始化pageData（从DOM提取分页链接）
-    pageData.value = Array.from(document.querySelectorAll('.long-td')).map(line =>
-        line.children[3].firstElementChild.href
-    );
-    console.log(pageData.value)
-    document.addEventListener("keydown", async (event) => {
-        // 如果面板未打开，直接返回
-        if (!dialogVisible.value || document.querySelector('.el-image-viewer__wrapper')) {
-            return;
-        }
-
-        if (event.key === "ArrowRight") {
-            event.preventDefault()
-            // 翻页
-            dataIndex.value++;
-            currentProgress.value++;
-            // 已到达最后一页
-            // 回到首页
-            if (dataIndex.value === dataList.value.length) {
-                dataIndex.value = 0;
-                currentProgress.value = 1;
-            }
-        }
-
-        if (event.key === "ArrowLeft") {
-            event.preventDefault()
-            if (dataIndex.value > 0) {
-                dataIndex.value--;
-                currentProgress.value--;
-            } else {
-                dataIndex.value = 0;
-                currentProgress.value = 1;
-            }
-        }
+async function submitAudit(status, mark) {
+  const form = document.querySelector('#taskAudit')
+  if (!form) { ElMessage.error('未找到任务表单'); return }
+  try {
+    const formData = new FormData(form)
+    formData.set('task_status', status)
+    formData.set('mark', mark)
+    const projectName = form.querySelector('div:nth-child(6) input')?.value || ''
+    const taskData = await getTaskList({ page:1, projectName })
+    const contractId = taskData?.list?.[0]?.contract_id
+    if (!contractId) throw new Error('未找到对应合同')
+    const projectData = await getProjectByContractID(contractId)
+    const auditName = projectData?.list?.[0]?.project_leader_name
+    if (!auditName) throw new Error('未找到项目负责人姓名')
+    formData.set('audit_user_name', auditName)
+    const response = await fetch(form.action || '/admin/task/taskaudit.html', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8', 'X-Requested-With':'XMLHttpRequest' },
+      body:new URLSearchParams(formData).toString(),
+      credentials:'include'
     })
-    await loadAllData();
-    // const restored = restoreFromCache(projectKey);
-    // if (!restored) {
-    //     await loadAllData();
-    // }
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    const result = await response.json()
+    const success = result.code === 1 || (typeof result.msg === 'string' && result.msg.includes('成功'))
+    if (success) ElMessage.success(result.msg || (status === '6' ? '任务已通过' : '任务已退回'))
+    else ElMessage.error(result.msg || '操作失败')
+  } catch (error) {
+    console.error(error)
+    ElMessage.error(`操作失败：${error.message}`)
+  }
+}
+const taskGoBack = () => submitAudit('-1', '修改')
+const taskPass = () => submitAudit('6', '通过')
+async function handleCheck() {
+  if (!isDataLoaded.value) await loadAllData()
+  if (isDataLoaded.value) dialogVisible.value = true
+}
+watch(dialogVisible, visible => {
+  if (visible) {
+    elapsedTime.value = 0
+    timerInterval = window.setInterval(() => elapsedTime.value += 1, 1000)
+  } else {
+    window.clearInterval(timerInterval)
+    elapsedTime.value = 0
+  }
+})
+onMounted(async () => {
+  try {
+    await getBaseData()
+    pageData.value = Array.from(document.querySelectorAll('.long-td'))
+      .map(line => line.children[3]?.firstElementChild?.href).filter(Boolean)
+    keydownHandler = event => {
+      if (!dialogVisible.value || document.querySelector('.el-image-viewer__wrapper')) return
+      if (event.key === 'ArrowRight') {
+        event.preventDefault()
+        dataIndex.value = (dataIndex.value + 1) % Math.max(dataList.value.length, 1)
+        currentProgress.value = dataIndex.value + 1
+        elapsedTime.value = 0
+      } else if (event.key === 'ArrowLeft') {
+        event.preventDefault()
+        dataIndex.value = Math.max(0, dataIndex.value - 1)
+        currentProgress.value = dataIndex.value + 1
+        elapsedTime.value = 0
+      }
+    }
+    document.addEventListener('keydown', keydownHandler)
+  } catch (error) { console.error('初始化任务检查数据失败：', error) }
+})
+onBeforeUnmount(() => {
+  window.clearInterval(timerInterval)
+  if (keydownHandler) document.removeEventListener('keydown', keydownHandler)
 })
 </script>
 
-<template>
-    <Panel v-model:dialogVisible="dialogVisible" v-bind="{
-        ...dataList[dataIndex],
-        currentProgress,
-        totalItem,
-    }" />
-    <div class="fixed-right">
-        <el-button @click="dialogVisible = true" type="primary">一键检查</el-button>
-        <el-popconfirm class="box-item" title="是否确认退回？" placement="top" @confirm="taskGoBack">
-            <template #reference>
-                <el-button type="danger">退回任务</el-button>
-            </template>
-        </el-popconfirm>
-        <el-popconfirm class="box-item" title="是否确认通过？" placement="top" @confirm="taskPass">
-            <template #reference>
-                <el-button type="success">通过任务</el-button>
-            </template>
-        </el-popconfirm>
-    </div>
-
-</template>
-
 <style scoped>
-.progress-container {
-    text-align: center;
-    font-size: 16px;
-    position: fixed;
-    top: 40%;
-    left: 25%;
-    color: black;
-    width: 50%;
-}
-
-/* 添加样式部分 */
-.fixed-right {
-  position: fixed;
-  right: 0;
-  top: 50vh;
-  transform: translateY(-50%);
-  z-index: 9999; /* 确保按钮始终在最上层 */
-  display: flex;
-  flex-direction: column;
-  gap: 10px; /* 按钮间距 */
-  padding: 10px;
-}
+.floating-buttons{position:fixed;top:20px;right:20px;z-index:9999;display:flex;gap:10px}
+.vertical-progress-wrapper{position:fixed;left:0;top:0;height:100vh;width:20px;z-index:9998;display:flex;flex-direction:column;align-items:center}
+.vertical-progress-track{height:100%;width:6px;background:#E8EEF5;border-radius:4px;overflow:hidden;display:flex;align-items:flex-end}
+.vertical-progress-fill{width:100%;background:#F3B9CA;transition:height .15s}
+.vertical-progress-text{position:absolute;top:50%;left:22px;transform:translateY(-50%);font-size:12px;color:#51495E}
 </style>
