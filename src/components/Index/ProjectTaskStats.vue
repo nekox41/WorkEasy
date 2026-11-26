@@ -18,6 +18,7 @@
       <el-alert v-if="loaded && sourceCounts.tasks > 0 && sourceCounts.matchedTasks === 0"
         title="已获取任务数据，但没有任务匹配到合同名称。请检查任务列表 contract_name 字段；当前统计不应作为完成情况依据。"
         type="warning" show-icon :closable="false" class="stats-alert" />
+      <el-alert v-if="loaded && sourceCounts.tasks === 0" title="接口返回 0 条符合条件的任务，请确认后台任务列表是否一致。" type="warning" show-icon :closable="false" class="stats-alert" />
       <template v-if="loaded">
         <div class="stats-overview">
           <div class="overview-item"><span>项目总数</span><strong>{{ summary.total }}</strong></div>
@@ -25,13 +26,6 @@
           <div class="overview-item is-pending"><span>未完成</span><strong>{{ summary.uncompleted }}</strong></div>
         </div>
         <div class="stats-filters">
-          <div class="filter-item"><label>汇总方式</label>
-            <el-select v-model="dimension" class="filter-select">
-              <el-option label="按地区汇总" value="region" />
-              <el-option label="按负责人汇总" value="leader" />
-              <el-option label="按负责人 + 地区汇总" value="leaderRegion" />
-            </el-select>
-          </div>
           <div class="filter-item"><label>地区筛选</label>
             <el-select v-model="selectedRegion" class="filter-select" clearable filterable placeholder="全部地区">
               <el-option v-for="item in regionOptions" :key="item" :label="item" :value="item" />
@@ -42,6 +36,7 @@
               <el-option v-for="item in leaderOptions" :key="item" :label="item" :value="item" />
             </el-select>
           </div>
+          <div class="filter-item"><label>归属地</label><el-input v-model="agencySearch" clearable placeholder="输入归属地关键词" /></div>
           <el-button text @click="resetFilters">重置筛选</el-button>
         </div>
         <el-table :data="groupRows" border stripe size="default" max-height="52vh" empty-text="没有符合筛选条件的项目">
@@ -61,7 +56,7 @@
           </el-table-column>
         </el-table>
         <div class="stats-footnote">
-          完成判定：当月任一测试任务 task_status_int 为 5（待审核）或 6（审核通过）即视为完成；4（执行中）不计完成。
+          完成判定：当月待审核或审核通过的测试任务，其 contract_name 匹配项目名称即视为完成。
           <span>任务日期：{{ dateRangeLabel }}</span>
         </div>
       </template>
@@ -76,7 +71,7 @@
         <el-table-column prop="name" label="项目名称" min-width="220" show-overflow-tooltip />
         <el-table-column prop="leader" label="项目负责人" min-width="130" />
         <el-table-column prop="region" label="地区" min-width="130" />
-        <el-table-column prop="contractNumber" label="合同编号" min-width="150" />
+        <el-table-column prop="fireAgency" label="归属地" min-width="150" />
         <el-table-column prop="taskCount" label="当月测试任务" width="115" align="center" />
       </el-table>
       <template #footer><el-button type="primary" @click="detailVisible = false">关闭</el-button></template>
@@ -91,7 +86,7 @@ import { DataAnalysis, Refresh } from '@element-plus/icons-vue'
 import { getCachedProjectTaskStatistics, refreshProjectTaskStatistics } from '../../api/Index/projectTaskStats'
 
 const loading = ref(false), cacheReady = ref(false), loaded = ref(false), panelVisible = ref(false)
-const error = ref(''), cacheWarning = ref(''), dimension = ref('region')
+const error = ref(''), cacheWarning = ref(''), agencySearch = ref('')
 const selectedRegion = ref(''), selectedLeader = ref('')
 const projects = ref([]), refreshedAt = ref('')
 const sourceCounts = ref({ contracts: 0, tasks: 0, matchedTasks: 0 })
@@ -109,18 +104,19 @@ const regionOptions = computed(() => [...new Set(projects.value.map(p => p.regio
 const leaderOptions = computed(() => [...new Set(projects.value.map(p => p.leader).filter(Boolean))].sort((a,b) => a.localeCompare(b,'zh-CN')))
 const filteredProjects = computed(() => projects.value.filter(p =>
   (!selectedRegion.value || p.region === selectedRegion.value) &&
-  (!selectedLeader.value || p.leader === selectedLeader.value)
+  (!selectedLeader.value || p.leader === selectedLeader.value) &&
+  String(p.fireAgency || '').normalize('NFKC').toLowerCase().includes(String(agencySearch.value || '').normalize('NFKC').trim().toLowerCase())
 ))
 const summary = computed(() => ({
   total: filteredProjects.value.length,
   completed: filteredProjects.value.filter(p => p.completed).length,
   uncompleted: filteredProjects.value.filter(p => !p.completed).length
 }))
-const groupLabel = computed(() => ({ region:'地区', leader:'项目负责人', leaderRegion:'项目负责人 / 地区' }[dimension.value]))
+const groupLabel = '地区 / 项目负责人'
 const groupRows = computed(() => {
   const groups = new Map()
   filteredProjects.value.forEach(project => {
-    const label = dimension.value === 'region' ? project.region : dimension.value === 'leader' ? project.leader : `${project.leader} / ${project.region}`
+    const label = `${project.region} / ${project.leader}`
     if (!groups.has(label)) groups.set(label, { label, total:0, completed:0, uncompleted:0, projects:[] })
     const group = groups.get(label)
     group.total++
@@ -130,7 +126,7 @@ const groupRows = computed(() => {
   return [...groups.values()].sort((a,b) => b.uncompleted-a.uncompleted || b.total-a.total || a.label.localeCompare(b.label,'zh-CN'))
 })
 function applyRecord(record) {
-  if (!record || record.month !== currentMonth || record.cacheRevision !== '3.0.5') return false
+  if (!record || record.month !== currentMonth || record.cacheRevision !== '3.0.6') return false
   projects.value = Array.isArray(record.projects) ? record.projects : []
   refreshedAt.value = record.refreshedAt || ''
   sourceCounts.value = record.sourceCounts || { contracts:0, tasks:0, matchedTasks:0 }
@@ -153,7 +149,7 @@ async function refreshStats() {
   loading.value = true; error.value = ''; cacheWarning.value = ''
   try {
     const result = await refreshProjectTaskStatistics(now)
-    applyRecord({ ...result, cacheRevision:'3.0.5' })
+    applyRecord({ ...result, cacheRevision:'3.0.6' })
     if (!result.cacheSaved) {
       cacheWarning.value = `数据已刷新，但未能保存到本地：${result.cacheError}`
       ElMessage.warning('数据已获取，但本地缓存保存失败')
@@ -165,7 +161,7 @@ async function refreshStats() {
   } finally { loading.value = false }
 }
 function resetFilters() {
-  selectedRegion.value = ''; selectedLeader.value = ''; dimension.value = 'region'
+  selectedRegion.value = ''; selectedLeader.value = ''; agencySearch.value = ''
 }
 function showUncompleted(row) {
   detailProjects.value = row.projects

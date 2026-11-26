@@ -5,9 +5,9 @@ const HEADERS = { 'X-Requested-With': 'XMLHttpRequest' }
 const PROVINCE_CODE = '410000'
 const PAGE_SIZE = 10
 const DB_NAME = 'workeasy-project-task-stats'
-const DB_VERSION = 2
+const DB_VERSION = 3
 const STORE_NAME = 'monthly-cache'
-const CACHE_REVISION = '3.0.5'
+const CACHE_REVISION = '3.0.6'
 
 function monthRange(date = new Date()) {
   const year = date.getFullYear(), month = date.getMonth()
@@ -58,7 +58,7 @@ function listOf(data) {
   if (Array.isArray(data?.list)) return data.list
   if (Array.isArray(data?.data?.list)) return data.data.list
   if (Array.isArray(data?.data)) return data.data
-  return []
+  throw new Error('列表接口返回格式异常，请检查登录状态')
 }
 function pagesOf(data) {
   const direct = Number(data?.allpage ?? data?.all_page ?? data?.total_page ?? data?.data?.allpage ?? data?.data?.all_page)
@@ -111,12 +111,15 @@ async function fetchFresh(date = new Date()) {
     id: '', uuid: '', start: '', end: '', contract_type: '', contract_wb_name: '',
     sign_end_start: '', sign_end_end: '', project_leader_name: '', get_contract_id: ''
   })}`)
-  // key3[]=0 不限制审核状态；key5[]=5 只取测试任务；key6=3 沿用后台任务列表的有效查询组合。
-  const tasks = await fetchPages(page => `${BASE_URL}/admin/task/index.html?${query({
-    page, key: start, key2: end, 'key3[]': 0, key4: '', 'key5[]': 5,
-    key6: 3, key7: PROVINCE_CODE, key8: '', fire_g_uuid: '', fire_p_uuid: '',
-    fire_uuid: '', header_name: ''
-  })}`)
+  const tasks = await fetchPages(page => {
+    const params = new URLSearchParams([
+      ['page', String(page)], ['key', start], ['key2', end],
+      ['key3[]', '5'], ['key3[]', '6'], ['key4', ''], ['key5[]', '5'],
+      ['key6', '0'], ['key7', ''], ['key8', ''], ['fire_g_uuid', ''],
+      ['fire_p_uuid', ''], ['fire_uuid', ''], ['header_name', '']
+    ])
+    return `${BASE_URL}/admin/task/index.html?${params}`
+  })
   const groups = new Map()
   const statusCounts = { pending: 0, approved: 0, executing: 0, other: 0 }
   for (const task of tasks) {
@@ -136,8 +139,9 @@ async function fetchFresh(date = new Date()) {
       name,
       leader: clean(contract?.project_leader_name) || '负责人未填写',
       region: getRegion(contract),
+      fireAgency: clean(contract?.fire_agency),
       contractNumber: clean(contract?.contract_no ?? contract?.contract_number ?? contract?.contract_num ?? contract?.contract_code ?? contract?.number ?? contract?.code) || '—',
-      completed: matched.some(task => ['pending', 'approved'].includes(getTaskStatus(task))),
+      completed: matched.length > 0,
       taskCount: matched.length
     }
   })
