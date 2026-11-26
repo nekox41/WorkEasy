@@ -2,11 +2,25 @@
 
 WorkEasy 是面向 `henan.xmf119.cn` 管理后台的 Tampermonkey / Violentmonkey 辅助脚本，使用 Vue 3、Element Plus、Vite 与 `vite-plugin-monkey` 构建。
 
-## 3.0.3
+## 安装最新版
 
-本版本以用户提供的 `workeasy-2.6.3.user.js` 为功能基准，将脚本实现还原为仓库可维护的 Vue 源码，并覆盖原有对应模块。
+<https://github.com/nekox41/WorkEasy/releases/latest/download/workeasy.user.js>
 
-### 功能
+点击上面的链接即可打开油猴安装页面。后续版本会通过同一个链接自动获取最新版脚本。
+
+## 3.0.4
+
+### 项目任务统计缓存
+
+- 使用 IndexedDB 按自然月保存项目统计结果。
+- 打开首页只读取本地当前月份缓存，不会自动请求合同或任务接口。
+- 没有缓存时显示空状态，用户点击「首次加载 / 手动刷新」才会请求服务器。
+- 只有用户主动点击「手动刷新统计」才重新获取当月河南省进行中合同和测试类型任务。
+- 分页请求最多并发 2 页，降低刷新时对业务服务器的瞬时压力。
+- 刷新成功后覆盖当月缓存并显示最后更新时间；刷新失败保留旧数据。
+- 新月份不会展示旧月份数据，也不会自动联网刷新，用户需要手动获取当月数据。
+
+### 其他功能
 
 - 首页看板：统计待生成报告、待备案数量；展示待生成报告项目及提交时间。
 - 项目任务统计：以河南省进行中合同为项目全集，统计当前自然月测试类型任务；支持按地区、项目负责人、负责人 + 地区汇总，展示项目总数、已完成、未完成和完成率；点击未完成数量查看项目名称、负责人、地区及合同编号。
@@ -23,10 +37,11 @@ npm run dev
 npm run build
 ```
 
-构建产物位于 `dist/`。GitHub Actions 在 `main` 分支更新时自动构建并上传 `tampermonkey-script` artifact。
+构建产物位于 `dist/`。GitHub Actions 会在相关源码更新时构建，并发布仅包含 `workeasy.user.js` 的 GitHub Release。
 
-- 用户脚本版本：`3.0.3`
+- 用户脚本版本：`3.0.4`
 - 目标站点：`*://*.xmf119.cn/*`
 - 构建入口：`src/main.js`
+- 最新安装链接：<https://github.com/nekox41/WorkEasy/releases/latest/download/workeasy.user.js>
 
 请在具备权限的账号下使用；退回、审核通过、计划新建和计划下发均为实际写操作，执行前请确认目标项目。
