@@ -30,7 +30,7 @@ jobs:
       - name: Verify release asset
         run: |
           test -s dist/workeasy.user.js
-          node -e "const fs=require('fs'); const s=fs.readFileSync('dist/workeasy.user.js','utf8'); if(!/@version\\s+3\\.1\\.0/.test(s)) { console.error('Userscript version metadata does not match 3.1.1'); process.exit(1) }"
+          node -e "const fs=require('fs'); const s=fs.readFileSync('dist/workeasy.user.js','utf8'); if(!/@version\\s+3\\.1\\.1/.test(s)) { console.error('Userscript version metadata does not match 3.1.1'); process.exit(1) }"
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
