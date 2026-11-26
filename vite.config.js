@@ -19,7 +19,7 @@ export default defineConfig({
         match: ['*://*.xmf119.cn/*'],
         connect: ['gitee.com'],
         description: '一键检查任务、项目任务统计（本地缓存/手动刷新）、报告填写及计划管理',
-        version: '3.1.1',
+        version: '3.1.2',
         author: 'aameow',
         'run-at': 'document-end',
         updateURL: latestScript,

@@ -152,7 +152,7 @@ async function fetchFresh(date = new Date(), cached = null) {
   const projects = contracts.map(contract => {
     const matched = groups.get(projectKey(contract.name)) || []
     matchedTasks += matched.length
-    return { ...contract, completed: matched.length > 0, taskCount: matched.length }
+    return { ...contract, completed: matched.length > 0, taskCount: matched.length, matchedTasks: matched.map(task => ({ id: task.id ?? task.uuid ?? task.task_sn, name: clean(task.task_name), taskSn: clean(task.task_sn), status: getTaskStatus(task), statusText: clean(task.task_status), commitTime: clean(task.commit_time) })) }
   })
   return { projectsRefreshedAt, month: key, start, end, provinceCode: PROVINCE_CODE, projects,
     sourceCounts: { contracts: contracts.length, tasks: tasks.length, matchedTasks }, statusCounts }

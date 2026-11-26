@@ -41,6 +41,7 @@
           </div>
           <div class="filter-item"><label>归属地</label><el-input v-model="agencySearch" clearable placeholder="输入归属地关键词" /></div>
           <el-button text @click="resetFilters">重置筛选</el-button>
+          <el-button type="primary" plain @click="openAllDetails">查看详情（{{ summary.total }}）</el-button>
         </div>
         <el-table :data="groupRows" border stripe size="default" max-height="52vh" empty-text="没有符合筛选条件的项目">
           <el-table-column prop="label" :label="groupLabel" min-width="200" show-overflow-tooltip />
@@ -69,6 +70,38 @@
       </el-empty>
       <template #footer><el-button @click="panelVisible = false">关闭</el-button></template>
     </el-dialog>
+    <el-dialog v-model="allDetailVisible" title="筛选项目详情" width="min(1120px, 94vw)" top="5vh" append-to-body>
+      <div class="detail-summary">
+        当前筛选结果：共 {{ filteredProjects.length }} 个项目，
+        <span class="detail-done">已完成 {{ summary.completed }}</span>，
+        <span class="detail-undone">未完成 {{ summary.uncompleted }}</span>
+      </div>
+      <el-table :data="filteredProjects" border stripe size="default" max-height="62vh" row-key="id" empty-text="当前筛选条件下没有项目">
+        <el-table-column prop="name" label="项目名称" min-width="230" show-overflow-tooltip />
+        <el-table-column prop="leader" label="项目负责人" width="120" />
+        <el-table-column prop="region" label="地区" width="110" />
+        <el-table-column prop="fireAgency" label="归属地" min-width="130" show-overflow-tooltip />
+        <el-table-column label="完成状态" width="105" align="center">
+          <template #default="{ row }">
+            <el-tag :type="row.completed ? 'success' : 'danger'" effect="light">{{ row.completed ? '已完成' : '未完成' }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="taskCount" label="匹配任务" width="90" align="center" />
+        <el-table-column label="匹配到的任务" min-width="240">
+          <template #default="{ row }">
+            <template v-if="row.matchedTasks?.length">
+              <div v-for="task in row.matchedTasks" :key="task.id" class="matched-task">
+                <span>{{ task.name || task.taskSn || '未命名任务' }}</span>
+                <el-tag size="small" :type="task.status === 'approved' ? 'success' : 'warning'">{{ task.statusText || (task.status === 'approved' ? '审核通过' : '待审核') }}</el-tag>
+              </div>
+            </template>
+            <span v-else-if="row.completed" class="detail-muted">缓存中没有任务明细，请点击「刷新任务进度」</span>
+            <span v-else class="detail-muted">未找到符合条件的当月测试任务</span>
+          </template>
+        </el-table-column>
+      </el-table>
+      <template #footer><el-button @click="allDetailVisible = false">关闭</el-button></template>
+    </el-dialog>
     <el-dialog v-model="detailVisible" :title="detailTitle" width="min(900px, 92vw)" append-to-body>
       <el-table :data="detailProjects" border stripe max-height="55vh" empty-text="没有未完成项目">
         <el-table-column prop="name" label="项目名称" min-width="220" show-overflow-tooltip />
@@ -95,6 +128,7 @@ const projects = ref([]), refreshedAt = ref(''), projectsRefreshedAt = ref(''), 
 let activeRecord = null
 const sourceCounts = ref({ contracts: 0, tasks: 0, matchedTasks: 0 })
 const detailVisible = ref(false), detailProjects = ref([]), detailTitle = ref('')
+const allDetailVisible = ref(false)
 const now = new Date()
 const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
 const monthLabel = computed(() => `${currentMonth.slice(0, 4)}年${Number(currentMonth.slice(5, 7))}月`)
@@ -172,6 +206,7 @@ async function refreshStats(mode = 'all') {
 function resetFilters() {
   selectedRegion.value = ''; selectedLeader.value = ''; agencySearch.value = ''
 }
+function openAllDetails() { allDetailVisible.value = true }
 function showUncompleted(row) {
   detailProjects.value = row.projects
   detailTitle.value = `${row.label} · 未完成项目（${row.uncompleted}）`
@@ -197,6 +232,7 @@ onMounted(loadLocalCache)
 .filter-item label{font-size:12px;color:#77717F}
 .filter-select{width:100%}
 .zero-value{color:#B6B1B7}
+.detail-summary{margin-bottom:12px;color:#77717F;font-size:13px}.detail-done{color:#2E9E5B;font-weight:600}.detail-undone{color:#C65B7B;font-weight:600}.matched-task{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:3px 0}.detail-muted{color:#A0A0A0;font-size:12px}
 .stats-footnote{display:flex;justify-content:space-between;gap:12px;margin-top:12px;color:#909399;font-size:12px;line-height:1.6}
 @media(max-width:680px){.stats-overview{gap:6px}.overview-item{padding:10px;display:block}.overview-item strong{display:block;margin-top:4px}.panel-toolbar{align-items:flex-start}.stats-footnote{display:block}.stats-footnote span{display:block;margin-top:4px}}
 </style>
