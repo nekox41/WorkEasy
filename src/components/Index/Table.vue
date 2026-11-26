@@ -1,163 +1,105 @@
 <template>
-    <div class="kanban">
-        <el-table :data="tableDataArray" border style="width: 100%">
-            <!-- 表头 -->
-            <el-table-column label="项目数量" :render-header="renderMergedHeader">
-                <template #default>
-                    <span>{{ tableData.total }}</span>
-                </template>
-            </el-table-column>
-
-            <!-- 计划 -->
-            <el-table-column label="计划">
-                <el-table-column label="未创建">
-                    <template #default>
-                        <span>{{ tableData.uncreated }}</span>
-                    </template>
-                </el-table-column>
-                <el-table-column label="未下发">
-                    <template #default>
-                        <span>{{ tableData.unissued }}</span>
-                    </template>
-                </el-table-column>
-                <el-table-column label="未完成">
-                    <template #default>
-                        <span>{{ tableData.unfinished }}</span>
-                    </template>
-                </el-table-column>
-            </el-table-column>
-
-            <!-- 已下发计划 -->
-            <el-table-column label="已下发计划">
-                <el-table-column label="待审核">
-                    <template #default>
-                        <span>{{ tableData.unchecked }}</span>
-                    </template>
-                </el-table-column>
-                <el-table-column label="待生成">
-                    <template #default>
-                        <el-button text @click="showUngenerated">{{ tableData.ungenerated }}</el-button>
-                    </template>
-                </el-table-column>
-                <el-table-column label="待备案">
-                    <template #default>
-                        <span>{{ tableData.unrecorded }}</span>
-                    </template>
-                </el-table-column>
-            </el-table-column>
-        </el-table>
-
-        <!-- 使用 el-alert 替代原生 alert -->
-        <el-alert title="由于计划会统计非维保项目，即将到期项目，所以通常比总项目数量要多。总项目数量是本月应出报告数量，更具参考价值。" type="warning" effect="dark" show-icon
-            :closable="false" style="margin: 10px auto; max-width: 60%" />
-
-        <el-alert title="助手尚在实验中，不要盲目相信。建议每间隔两天手动检查一次项目状况。" type="error" effect="dark" show-icon :closable="false"
-            style="margin: 10px auto; max-width: 60%" />
-
-        <!-- 弹窗 -->
-        <el-dialog v-model="dialogVisible" top="20vh" width="60%" :append-to-body="true">
-            <el-table :data="generatable" stripe>
-                <el-table-column prop="contract_name" label="项目名" />
-                <el-table-column prop="plan_name" label="计划" />
-                <el-table-column prop="commit_time" label="提交时间" />
-            </el-table>
-        </el-dialog>
-    </div>
+  <div class="kanban">
+    <el-table :data="tableData" border style="width:100%">
+      <el-table-column label="待生成报告">
+        <template #default>
+          <el-button text type="primary" :disabled="loading" @click="dialogVisible = true">{{ ungeneratedCount }}</el-button>
+        </template>
+      </el-table-column>
+      <el-table-column label="待备案数量">
+        <template #default>{{ unrecordedCount }}</template>
+      </el-table-column>
+      <el-table-column label="操作" width="120">
+        <template #default>
+          <el-button type="primary" size="small" :loading="loading" @click="loadData">加载数据</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+    <el-dialog v-model="dialogVisible" top="20vh" width="70%" append-to-body>
+      <el-table :data="generatableList" stripe :row-class-name="rowClassName">
+        <el-table-column prop="contract_name" label="项目名" />
+        <el-table-column prop="commit_time" label="提交时间" />
+      </el-table>
+    </el-dialog>
+  </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import {
-    getUnrecordedProject,
-    getUncreatedProject,
-    getUnissuedProject,
-    getUnfinishedProject,
-    getUncheckedProject,
-    getUngeneratedProject
-} from '../../api/Index/table'
+import { ref } from 'vue'
+import { ElMessage } from 'element-plus'
 
-const tableData = ref({
-    total: 0,
-    uncreated: 0,
-    unissued: 0,
-    unfinished: 0,
-    unchecked: 0,
-    ungenerated: 0,
-    unrecorded: 0
-})
-
+const recordUrl = 'https://henan.xmf119.cn/admin/reportdocument/recordlist.html?page=1&key=&key4=&key1=-1&key2=0&start=2025-08-01&end='
+const ungeneratedCount = ref(0)
+const unrecordedCount = ref(0)
+const generatableList = ref([])
+const loading = ref(false)
 const dialogVisible = ref(false)
-const generatable = ref([])
+const tableData = ref([{}])
 
-// 模拟一行数据用于 el-table 渲染
-const tableDataArray = computed(() => [tableData.value])
-
-async function fetchData() {
-    try {
-        const element = document.querySelector("body > div.example-wrap > div > table > tbody > tr > td:nth-child(5) > a")
-        if (element) {
-            tableData.value.total = parseInt(element.textContent)
-        }
-
-        const uncreatedRes = await getUncreatedProject()
-        if (uncreatedRes && uncreatedRes.page_str) {
-            const match = uncreatedRes.page_str.match(/共(\d+)条$/)
-            if (match) {
-                tableData.value.uncreated = parseInt(match[1])
-            }
-        }
-
-        const unissuedRes = await getUnissuedProject()
-        if (unissuedRes && unissuedRes.page_str) {
-            const match = unissuedRes.page_str.match(/共(\d+)条$/)
-            if (match) {
-                tableData.value.unissued = parseInt(match[1])
-            }
-        }
-
-        const unfinishedRes = await getUnfinishedProject()
-        if (unfinishedRes && unfinishedRes.page_str) {
-            const match = unfinishedRes.page_str.match(/共(\d+)条$/)
-            if (match) {
-                tableData.value.unfinished = parseInt(match[1])
-            }
-        }
-
-        const uncheckedRes = await getUncheckedProject()
-        tableData.value.unchecked = uncheckedRes.total
-
-        generatable.value = await getUngeneratedProject()
-        tableData.value.ungenerated = generatable.value.length
-
-        const unrecordedRes = await getUnrecordedProject()
-        if (unrecordedRes && unrecordedRes.page_str) {
-            const match = unrecordedRes.page_str.match(/共(\d+)条$/)
-            if (match) {
-                tableData.value.unrecorded = parseInt(match[1])
-            }
-        }
-    } catch (error) {
-        console.error('获取项目状态数据失败：', error)
+function getFirstDayOfMonth() {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+}
+function parseCountFromPageStr(pageStr) {
+  const match = (pageStr || '').match(/共(\d+)条/)
+  return match ? Number.parseInt(match[1], 10) : 0
+}
+function getDayDiff(commitTime) {
+  if (!commitTime) return 0
+  const date = new Date(commitTime)
+  if (Number.isNaN(date.getTime())) return 0
+  date.setHours(0, 0, 0, 0)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return Math.floor((today - date) / 86400000)
+}
+function rowClassName({ row }) {
+  const diff = getDayDiff(row.commit_time)
+  if (diff > 5) return 'danger-row'
+  if (diff > 3) return 'warning-row'
+  return ''
+}
+function buildTaskUrl(page) {
+  const params = new URLSearchParams({
+    page: String(page), key: getFirstDayOfMonth(), key2: '', 'key3[]': '6',
+    key4: '', 'key5[]': '5', key6: '3', key7: '', key8: '',
+    fire_g_uuid: '', fire_p_uuid: '', fire_uuid: '', header_name: ''
+  })
+  return `https://henan.xmf119.cn/admin/task/index.html?${params.toString()}`
+}
+async function loadData() {
+  if (loading.value) return
+  loading.value = true
+  try {
+    const headers = { 'x-requested-with': 'XMLHttpRequest' }
+    const firstResponse = await fetch(buildTaskUrl(1), { credentials: 'include', headers })
+    if (!firstResponse.ok) throw new Error(`任务列表请求失败：HTTP ${firstResponse.status}`)
+    const firstPage = await firstResponse.json()
+    const totalPages = Math.ceil(Number(firstPage.total || 0) / 10)
+    let allTasks = firstPage.list || []
+    if (totalPages > 1) {
+      const pages = await Promise.all(Array.from({ length: totalPages - 1 }, (_, i) =>
+        fetch(buildTaskUrl(i + 2), { credentials: 'include', headers }).then(async response => {
+          if (!response.ok) throw new Error(`任务列表第 ${i + 2} 页请求失败：HTTP ${response.status}`)
+          return response.json()
+        })
+      ))
+      pages.forEach(page => { allTasks = allTasks.concat(page.list || []) })
     }
+    generatableList.value = allTasks.filter(item => item.report_name === '')
+    ungeneratedCount.value = generatableList.value.length
+    const recordResponse = await fetch(recordUrl, { credentials: 'include', headers })
+    if (!recordResponse.ok) throw new Error(`备案列表请求失败：HTTP ${recordResponse.status}`)
+    unrecordedCount.value = parseCountFromPageStr((await recordResponse.json()).page_str)
+  } catch (error) {
+    console.error('加载数据失败：', error)
+    ElMessage.error(`加载数据失败：${error.message}`)
+  } finally { loading.value = false }
 }
-
-function showUngenerated() {
-    dialogVisible.value = true
-}
-
-onMounted(() => {
-    fetchData()
-})
 </script>
 
-<style>
-.tips {
-    width: 60%;
-    margin: 0 auto;
-    margin-top: 10px;
-}
-
-.el-table .cell {
-    text-align: center;
-}
+<style scoped>
+.kanban { margin:10px 0; }
+:deep(.warning-row) { background-color:#F3B9CA !important;color:#51495E; }
+:deep(.danger-row) { background-color:#51495E !important;color:#FAF6F3; }
 </style>
