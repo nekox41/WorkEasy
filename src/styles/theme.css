@@ -1,0 +1,18 @@
+/* WorkEasy 3.0.3 palette restored from the 2.6.3 userscript */
+:root{
+ --el-color-primary:#F3B9CA;--el-color-primary-light-3:#F7CEDA;--el-color-primary-light-5:#F9DCE4;--el-color-primary-light-7:#FBEAEF;--el-color-primary-light-8:#FDF1F4;--el-color-primary-light-9:#FEF8FA;--el-color-primary-dark-2:#C294A2;
+ --el-color-success:#899DBD;--el-color-success-light-3:#ACBAD1;--el-color-success-light-5:#C4CEDE;--el-color-success-light-7:#DCE2EB;--el-color-success-light-8:#E7EBF2;--el-color-success-light-9:#F3F5F8;--el-color-success-dark-2:#6E7E97;
+ --el-color-warning:#C5D5E5;--el-color-warning-light-3:#D6E2ED;--el-color-warning-light-5:#E2EAF2;--el-color-warning-light-7:#EEF2F7;--el-color-warning-light-8:#F3F7FA;--el-color-warning-light-9:#F9FBFC;--el-color-warning-dark-2:#9EAAB7;
+ --el-color-danger:#51495E;--el-color-danger-light-3:#85808E;--el-color-danger-light-5:#A8A4AE;--el-color-danger-light-7:#CBC8CF;--el-color-danger-light-8:#DCDBDF;--el-color-danger-light-9:#EEEDEF;--el-color-danger-dark-2:#413A4B;
+ --el-color-error:#51495E;--el-color-info:#736B7C;--el-text-color-primary:#51495E;--el-text-color-regular:#6A6374;--el-text-color-secondary:#958E9A;--el-text-color-placeholder:#B6B1B7;
+ --el-border-color:#C5D5E5;--el-border-color-light:#DCE6EF;--el-border-color-lighter:#E8EEF5;--el-fill-color:#F0ECEA;--el-fill-color-light:#F3EFED;--el-fill-color-lighter:#FAF6F3;--el-fill-color-blank:#FFF;--el-bg-color:#FAF6F3;--el-bg-color-overlay:#FAF6F3;--el-bg-color-page:#F2EDEC;
+}
+.el-button{--el-button-hover-text-color:#51495E;--el-button-hover-bg-color:#FEF8FA;--el-button-hover-border-color:#F3B9CA;--el-button-active-text-color:#51495E;--el-button-active-bg-color:#FDF1F4;--el-button-active-border-color:#F3B9CA}
+.el-button--primary{--el-button-text-color:#51495E;--el-button-bg-color:#F3B9CA;--el-button-border-color:#F3B9CA;--el-button-hover-text-color:#51495E;--el-button-hover-bg-color:#F7CEDA;--el-button-hover-border-color:#F7CEDA}
+.el-button--success{--el-button-text-color:#393342;--el-button-bg-color:#899DBD;--el-button-border-color:#899DBD;--el-button-hover-text-color:#393342;--el-button-hover-bg-color:#ACBAD1;--el-button-hover-border-color:#ACBAD1}
+.el-button--warning{--el-button-text-color:#51495E;--el-button-bg-color:#C5D5E5;--el-button-border-color:#C5D5E5}
+.el-button--danger{--el-button-text-color:#FAF6F3;--el-button-bg-color:#51495E;--el-button-border-color:#51495E}
+.el-tag.wk-status-tag{border:none}
+.el-tag.wk-status-符合{background:#2E9E5B;color:#fff}.el-tag.wk-status-不符合{background:#D93A3A;color:#fff}.el-tag.wk-status-不能检查{background:#F08A1C;color:#fff}.el-tag.wk-status-不存在{background:#8A8F98;color:#fff}
+.el-message--primary{--el-message-bg-color:#FEF8FA;--el-message-border-color:#FBEAEF;--el-message-text-color:#51495E}
+.el-popper.is-light{color:#51495E}
