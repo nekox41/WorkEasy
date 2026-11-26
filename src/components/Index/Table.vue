@@ -1,5 +1,6 @@
 <template>
   <div class="kanban">
+    <ProjectTaskStats />
     <el-table :data="tableData" border style="width:100%">
       <el-table-column label="待生成报告">
         <template #default>
@@ -27,6 +28,7 @@
 <script setup>
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
+import ProjectTaskStats from './ProjectTaskStats.vue'
 
 const recordUrl = 'https://henan.xmf119.cn/admin/reportdocument/recordlist.html?page=1&key=&key4=&key1=-1&key2=0&start=2025-08-01&end='
 const ungeneratedCount = ref(0)
