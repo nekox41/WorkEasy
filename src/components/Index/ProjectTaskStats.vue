@@ -137,7 +137,13 @@ async function loadStats() {
   }
 }
 
-function showAllUncompleted() {\n  detailProjects.value = projects.value.filter(project => !project.completed)\n  detailTitle.value = `全部未完成项目（${detailProjects.value.length}）`\n  detailVisible.value = true\n}\n\nfunction showUncompleted(row) {
+function showAllUncompleted() {
+  detailProjects.value = projects.value.filter(project => !project.completed)
+  detailTitle.value = `全部未完成项目（${detailProjects.value.length}）`
+  detailVisible.value = true
+}
+
+function showUncompleted(row) {
   detailProjects.value = row.projects
   detailTitle.value = `${row.label} · 未完成项目（${row.uncompleted}）`
   detailVisible.value = true
