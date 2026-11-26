@@ -6,12 +6,15 @@
         <div>
           <div class="panel-month">{{ monthLabel }} · 河南省进行中合同</div>
           <div class="panel-cache">
-            <template v-if="refreshedAt">本地缓存更新于 {{ refreshedAtLabel }}</template>
+            <template v-if="refreshedAt">任务更新于 {{ refreshedAtLabel }} · 项目更新于 {{ projectsRefreshedAtLabel }}</template>
             <template v-else>当前月份尚无缓存</template>
             <span v-if="loaded"> · 合同 {{ sourceCounts.contracts }} 条 / 任务 {{ sourceCounts.tasks }} 条 / 匹配 {{ sourceCounts.matchedTasks }} 条</span>
           </div>
         </div>
-        <el-button type="primary" :loading="loading" :disabled="loading" @click="refreshStats"><el-icon><Refresh /></el-icon>{{ loading ? '正在刷新…' : '手动刷新' }}</el-button>
+        <div class="refresh-actions">
+          <el-button type="primary" :loading="loading && refreshMode === 'tasks'" :disabled="loading || !loaded" @click="refreshStats('tasks')"><el-icon><Refresh /></el-icon>刷新任务进度</el-button>
+          <el-button :loading="loading && refreshMode === 'all'" :disabled="loading" @click="refreshStats('all')">刷新全部数据</el-button>
+        </div>
       </div>
       <el-alert v-if="error" :title="error" type="error" show-icon :closable="false" class="stats-alert" />
       <el-alert v-if="cacheWarning" :title="cacheWarning" type="warning" show-icon :closable="false" class="stats-alert" />
@@ -62,7 +65,7 @@
       </template>
       <el-skeleton v-else-if="loading" :rows="4" animated />
       <el-empty v-else :description="cacheReady ? '本月没有本地缓存，请点击手动刷新获取数据' : '正在读取本地缓存…'" :image-size="76">
-        <el-button type="primary" plain :loading="loading" @click="refreshStats">首次加载 / 手动刷新</el-button>
+        <el-button type="primary" plain :loading="loading" @click="refreshStats('all')">首次加载 / 刷新全部数据</el-button>
       </el-empty>
       <template #footer><el-button @click="panelVisible = false">关闭</el-button></template>
     </el-dialog>
@@ -88,7 +91,8 @@ import { getCachedProjectTaskStatistics, refreshProjectTaskStatistics } from '..
 const loading = ref(false), cacheReady = ref(false), loaded = ref(false), panelVisible = ref(false)
 const error = ref(''), cacheWarning = ref(''), agencySearch = ref('')
 const selectedRegion = ref(''), selectedLeader = ref('')
-const projects = ref([]), refreshedAt = ref('')
+const projects = ref([]), refreshedAt = ref(''), projectsRefreshedAt = ref(''), refreshMode = ref('')
+let activeRecord = null
 const sourceCounts = ref({ contracts: 0, tasks: 0, matchedTasks: 0 })
 const detailVisible = ref(false), detailProjects = ref([]), detailTitle = ref('')
 const now = new Date()
@@ -100,6 +104,7 @@ const refreshedAtLabel = computed(() => {
   const date = new Date(refreshedAt.value)
   return Number.isNaN(date.getTime()) ? refreshedAt.value : date.toLocaleString('zh-CN', { hour12: false })
 })
+const projectsRefreshedAtLabel = computed(() => projectsRefreshedAt.value ? new Date(projectsRefreshedAt.value).toLocaleString('zh-CN', { hour12: false }) : '未知')
 const regionOptions = computed(() => [...new Set(projects.value.map(p => p.region).filter(Boolean))].sort((a,b) => a.localeCompare(b,'zh-CN')))
 const leaderOptions = computed(() => [...new Set(projects.value.map(p => p.leader).filter(Boolean))].sort((a,b) => a.localeCompare(b,'zh-CN')))
 const filteredProjects = computed(() => projects.value.filter(p =>
@@ -126,7 +131,9 @@ const groupRows = computed(() => {
   return [...groups.values()].sort((a,b) => b.uncompleted-a.uncompleted || b.total-a.total || a.label.localeCompare(b.label,'zh-CN'))
 })
 function applyRecord(record) {
-  if (!record || record.month !== currentMonth || record.cacheRevision !== '3.0.6') return false
+  if (!record || record.month !== currentMonth || record.cacheRevision !== '3.1.0') return false
+  activeRecord = record
+  projectsRefreshedAt.value = record.projectsRefreshedAt || record.refreshedAt || ''
   projects.value = Array.isArray(record.projects) ? record.projects : []
   refreshedAt.value = record.refreshedAt || ''
   sourceCounts.value = record.sourceCounts || { contracts:0, tasks:0, matchedTasks:0 }
@@ -144,12 +151,13 @@ async function openPanel() {
   panelVisible.value = true
   if (!cacheReady.value) await loadLocalCache()
 }
-async function refreshStats() {
-  if (loading.value) return
+async function refreshStats(mode = 'all') {
+  if (loading.value || (mode === 'tasks' && !activeRecord)) return
+  refreshMode.value = mode
   loading.value = true; error.value = ''; cacheWarning.value = ''
   try {
-    const result = await refreshProjectTaskStatistics(now)
-    applyRecord({ ...result, cacheRevision:'3.0.6' })
+    const result = await refreshProjectTaskStatistics(now, mode === 'tasks' ? activeRecord : null)
+    applyRecord({ ...result, cacheRevision:'3.1.0' })
     if (!result.cacheSaved) {
       cacheWarning.value = `数据已刷新，但未能保存到本地：${result.cacheError}`
       ElMessage.warning('数据已获取，但本地缓存保存失败')
@@ -158,7 +166,7 @@ async function refreshStats() {
     console.error('项目任务统计刷新失败：',err)
     error.value = err?.response?.data?.msg || err?.message || '刷新项目任务统计失败'
     ElMessage.error(error.value)
-  } finally { loading.value = false }
+  } finally { loading.value = false; refreshMode.value = '' }
 }
 function resetFilters() {
   selectedRegion.value = ''; selectedLeader.value = ''; agencySearch.value = ''
@@ -174,6 +182,7 @@ onMounted(loadLocalCache)
 <style scoped>
 .project-task-stats-trigger{display:flex;justify-content:flex-start;margin:10px 0}
 .panel-toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px}
+.refresh-actions{display:flex;flex-wrap:wrap;gap:8px}.refresh-actions .el-button{margin-left:0}
 .panel-month{font-size:14px;font-weight:650;color:#51495E}
 .panel-cache{margin-top:5px;color:#909399;font-size:12px;line-height:1.5}
 .stats-alert{margin:8px 0}

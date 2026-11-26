@@ -7,7 +7,7 @@ const PAGE_SIZE = 10
 const DB_NAME = 'workeasy-project-task-stats'
 const DB_VERSION = 3
 const STORE_NAME = 'monthly-cache'
-const CACHE_REVISION = '3.0.6'
+const CACHE_REVISION = '3.1.0'
 
 function monthRange(date = new Date()) {
   const year = date.getFullYear(), month = date.getMonth()
@@ -35,8 +35,14 @@ async function readCache(month) {
   try {
     return await new Promise((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, 'readonly')
-      const req = tx.objectStore(STORE_NAME).get(cacheKey(month))
-      req.onsuccess = () => resolve(req.result || null)
+      const store = tx.objectStore(STORE_NAME)
+      const req = store.get(cacheKey(month))
+      req.onsuccess = () => {
+        if (req.result) return resolve(req.result)
+        const legacy = store.get(`${month}:3.0.6`)
+        legacy.onsuccess = () => resolve(legacy.result ? { ...legacy.result, cacheRevision: CACHE_REVISION, projectsRefreshedAt: legacy.result.refreshedAt } : null)
+        legacy.onerror = () => reject(legacy.error)
+      }
       req.onerror = () => reject(req.error || new Error('读取缓存失败'))
       tx.onabort = () => reject(tx.error || new Error('读取缓存失败'))
     })
@@ -103,14 +109,26 @@ function getTaskStatus(task) {
   return 'other'
 }
 
-async function fetchFresh(date = new Date()) {
-  const { start, end, key } = monthRange(date)
+async function fetchContracts() {
   const contracts = await fetchPages(page => `${BASE_URL}/admin/contract/index.html?${query({
     page, key: '', key2: '', key3: 0, key5: '', key6: 1, key7: PROVINCE_CODE,
     key8: '', key9: '', key10: '', project_leader: '', expireC: '', unexpireC: '',
     id: '', uuid: '', start: '', end: '', contract_type: '', contract_wb_name: '',
     sign_end_start: '', sign_end_end: '', project_leader_name: '', get_contract_id: ''
   })}`)
+  return contracts.filter(c => getContractName(c)).map(contract => ({
+    id: clean(contract?.id ?? contract?.contract_id ?? contract?.uuid) || getContractName(contract),
+    name: getContractName(contract),
+    leader: clean(contract?.project_leader_name) || '负责人未填写',
+    region: getRegion(contract),
+    fireAgency: clean(contract?.fire_agency),
+    contractNumber: clean(contract?.contract_no ?? contract?.contract_number ?? contract?.contract_sn) || '—'
+  }))
+}
+async function fetchFresh(date = new Date(), cached = null) {
+  const { start, end, key } = monthRange(date)
+  const contracts = cached ? cached.projects : await fetchContracts()
+  const projectsRefreshedAt = cached ? cached.projectsRefreshedAt || cached.refreshedAt : new Date().toISOString()
   const tasks = await fetchPages(page => {
     const params = new URLSearchParams([
       ['page', String(page)], ['key', start], ['key2', end],
@@ -131,29 +149,21 @@ async function fetchFresh(date = new Date()) {
     groups.get(name).push(task)
   }
   let matchedTasks = 0
-  const projects = contracts.filter(c => getContractName(c)).map(contract => {
-    const name = getContractName(contract), matched = groups.get(projectKey(name)) || []
+  const projects = contracts.map(contract => {
+    const matched = groups.get(projectKey(contract.name)) || []
     matchedTasks += matched.length
-    return {
-      id: clean(contract?.id ?? contract?.contract_id ?? contract?.uuid) || name,
-      name,
-      leader: clean(contract?.project_leader_name) || '负责人未填写',
-      region: getRegion(contract),
-      fireAgency: clean(contract?.fire_agency),
-      contractNumber: clean(contract?.contract_no ?? contract?.contract_number ?? contract?.contract_num ?? contract?.contract_code ?? contract?.number ?? contract?.code) || '—',
-      completed: matched.length > 0,
-      taskCount: matched.length
-    }
+    return { ...contract, completed: matched.length > 0, taskCount: matched.length }
   })
-  return { month: key, start, end, provinceCode: PROVINCE_CODE, projects,
+  return { projectsRefreshedAt, month: key, start, end, provinceCode: PROVINCE_CODE, projects,
     sourceCounts: { contracts: contracts.length, tasks: tasks.length, matchedTasks }, statusCounts }
 }
 
 export async function getCachedProjectTaskStatistics(date = new Date()) {
   return readCache(monthRange(date).key)
 }
-export async function refreshProjectTaskStatistics(date = new Date()) {
-  const record = { ...await fetchFresh(date), refreshedAt: new Date().toISOString() }
+export async function refreshProjectTaskStatistics(date = new Date(), cached = null) {
+  if (cached && (cached.month !== monthRange(date).key || !Array.isArray(cached.projects))) throw new Error('本月无有效项目缓存，请刷新全部数据')
+  const record = { ...await fetchFresh(date, cached), refreshedAt: new Date().toISOString() }
   try {
     await writeCache(record)
     return { ...record, cacheSaved: true, cacheError: '' }
