@@ -5,224 +5,153 @@ const HEADERS = { 'X-Requested-With': 'XMLHttpRequest' }
 const PROVINCE_CODE = '410000'
 const PAGE_SIZE = 10
 const DB_NAME = 'workeasy-project-task-stats'
-const DB_VERSION = 1
+const DB_VERSION = 2
 const STORE_NAME = 'monthly-cache'
+const CACHE_REVISION = '3.0.5'
 
-function getMonthRange(date = new Date()) {
-  const year = date.getFullYear()
-  const month = date.getMonth()
-  const start = `${year}-${String(month + 1).padStart(2, '0')}-01`
-  const end = `${year}-${String(month + 1).padStart(2, '0')}-${new Date(year, month + 1, 0).getDate()}`
-  return { start, end, key: `${year}-${String(month + 1).padStart(2, '0')}` }
+function monthRange(date = new Date()) {
+  const year = date.getFullYear(), month = date.getMonth()
+  const key = `${year}-${String(month + 1).padStart(2, '0')}`
+  return { start: `${key}-01`, end: `${key}-${new Date(year, month + 1, 0).getDate()}`, key }
 }
+const cacheKey = month => `${month}:${CACHE_REVISION}`
 
-function openCacheDatabase() {
+function openDb() {
   return new Promise((resolve, reject) => {
-    if (!('indexedDB' in window)) {
-      reject(new Error('当前浏览器不支持 IndexedDB，无法保存本地统计缓存'))
-      return
+    if (!('indexedDB' in window)) return reject(new Error('当前浏览器不支持 IndexedDB'))
+    const req = indexedDB.open(DB_NAME, DB_VERSION)
+    req.onupgradeneeded = () => {
+      const db = req.result
+      if (db.objectStoreNames.contains(STORE_NAME)) db.deleteObjectStore(STORE_NAME)
+      db.createObjectStore(STORE_NAME, { keyPath: 'cacheKey' })
     }
-    const request = indexedDB.open(DB_NAME, DB_VERSION)
-    request.onupgradeneeded = () => {
-      const db = request.result
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: 'month' })
-      }
-    }
-    request.onsuccess = () => resolve(request.result)
-    request.onerror = () => reject(request.error || new Error('打开本地缓存失败'))
-    request.onblocked = () => reject(new Error('本地缓存升级被其他页面阻塞，请关闭其他 WorkEasy 页面后重试'))
+    req.onsuccess = () => resolve(req.result)
+    req.onerror = () => reject(req.error || new Error('打开本地缓存失败'))
+    req.onblocked = () => reject(new Error('缓存升级被阻塞，请关闭其他 WorkEasy 页面后重试'))
   })
 }
-
-async function readMonthlyCache(month) {
-  const db = await openCacheDatabase()
+async function readCache(month) {
+  const db = await openDb()
   try {
     return await new Promise((resolve, reject) => {
-      const transaction = db.transaction(STORE_NAME, 'readonly')
-      const request = transaction.objectStore(STORE_NAME).get(month)
-      request.onsuccess = () => resolve(request.result || null)
-      request.onerror = () => reject(request.error || new Error('读取本地统计缓存失败'))
-      transaction.onabort = () => reject(transaction.error || new Error('读取本地统计缓存失败'))
+      const tx = db.transaction(STORE_NAME, 'readonly')
+      const req = tx.objectStore(STORE_NAME).get(cacheKey(month))
+      req.onsuccess = () => resolve(req.result || null)
+      req.onerror = () => reject(req.error || new Error('读取缓存失败'))
+      tx.onabort = () => reject(tx.error || new Error('读取缓存失败'))
     })
-  } finally {
-    db.close()
-  }
+  } finally { db.close() }
 }
-
-async function writeMonthlyCache(record) {
-  const db = await openCacheDatabase()
+async function writeCache(record) {
+  const db = await openDb()
   try {
     await new Promise((resolve, reject) => {
-      const transaction = db.transaction(STORE_NAME, 'readwrite')
-      transaction.objectStore(STORE_NAME).put(record)
-      transaction.oncomplete = resolve
-      transaction.onerror = () => reject(transaction.error || new Error('写入本地统计缓存失败'))
-      transaction.onabort = () => reject(transaction.error || new Error('写入本地统计缓存失败'))
+      const tx = db.transaction(STORE_NAME, 'readwrite')
+      tx.objectStore(STORE_NAME).put({ ...record, cacheKey: cacheKey(record.month), cacheRevision: CACHE_REVISION })
+      tx.oncomplete = resolve
+      tx.onerror = () => reject(tx.error || new Error('写入缓存失败'))
+      tx.onabort = () => reject(tx.error || new Error('写入缓存失败'))
     })
-  } finally {
-    db.close()
-  }
+  } finally { db.close() }
 }
-
-function readList(data) {
+function listOf(data) {
   if (Array.isArray(data?.list)) return data.list
   if (Array.isArray(data?.data?.list)) return data.data.list
   if (Array.isArray(data?.data)) return data.data
   return []
 }
-
-function readPageCount(data, currentPage) {
+function pagesOf(data) {
   const direct = Number(data?.allpage ?? data?.all_page ?? data?.total_page ?? data?.data?.allpage ?? data?.data?.all_page)
   if (Number.isFinite(direct) && direct > 0) return direct
   const total = Number(data?.total ?? data?.data?.total)
-  if (Number.isFinite(total) && total > 0) return Math.ceil(total / PAGE_SIZE)
-  return readList(data).length < PAGE_SIZE ? currentPage : currentPage + 1
+  return Number.isFinite(total) && total > 0 ? Math.ceil(total / PAGE_SIZE) : 1
 }
-
-async function fetchAllPages(urlBuilder) {
-  const firstResponse = await axios.get(urlBuilder(1), { headers: HEADERS, withCredentials: true })
-  const firstData = firstResponse.data
-  const all = [...readList(firstData)]
-  const pageCount = readPageCount(firstData, 1)
-  if (pageCount <= 1) return all
-
-  // 每次最多并发 2 页，避免手动刷新时给业务服务器造成突发压力。
-  for (let page = 2; page <= pageCount; page += 2) {
-    const batch = [page, page + 1].filter(number => number <= pageCount)
-    const results = await Promise.all(batch.map(async number => {
-      const response = await axios.get(urlBuilder(number), { headers: HEADERS, withCredentials: true })
-      return readList(response.data)
-    }))
-    results.forEach(items => all.push(...items))
+async function fetchPages(urlForPage) {
+  const first = await axios.get(urlForPage(1), { headers: HEADERS, withCredentials: true })
+  const all = [...listOf(first.data)], totalPages = pagesOf(first.data)
+  for (let page = 2; page <= totalPages; page += 2) {
+    const batch = [page, page + 1].filter(p => p <= totalPages)
+    const rows = await Promise.all(batch.map(async p => listOf((await axios.get(urlForPage(p), { headers: HEADERS, withCredentials: true })).data)))
+    rows.forEach(rowsForPage => all.push(...rowsForPage))
   }
   return all
 }
-
-function buildQuery(values) {
+function query(values) {
   const params = new URLSearchParams()
-  Object.entries(values).forEach(([key, value]) => {
-    if (value !== undefined && value !== null) params.append(key, String(value))
-  })
+  Object.entries(values).forEach(([k, v]) => { if (v !== undefined && v !== null && v !== '') params.append(k, String(v)) })
   return params.toString()
 }
-
-function normalizeText(value) {
-  return String(value ?? '').replace(/\s+/g, ' ').trim()
-}
-
-function getContractName(contract) {
-  return normalizeText(contract?.name ?? contract?.contract_name ?? contract?.project_name)
-}
-
-function getRegion(contract) {
-  const county = normalizeText(
-    contract?.key10 ?? contract?.county_name ?? contract?.district_name ??
-    contract?.area_name ?? contract?.county ?? contract?.district ??
-    contract?.fire_county_name ?? contract?.region_name
-  )
+const clean = value => String(value ?? '').normalize('NFKC').replace(/\s+/g, ' ').trim()
+const projectKey = value => clean(value).replace(/[\u3000\s]+/g, '')
+const getContractName = row => clean(row?.name ?? row?.contract_name ?? row?.project_name)
+function getRegion(row) {
+  const county = clean(row?.key10 ?? row?.county_name ?? row?.district_name ?? row?.area_name ?? row?.county ?? row?.district ?? row?.fire_county_name ?? row?.region_name)
   if (county) return county
-
-  const cityName = normalizeText(contract?.city_str ?? contract?.city_name)
-  if (cityName) return cityName
-  const cityCode = normalizeText(contract?.key8 ?? contract?.city_code ?? contract?.city_id ?? contract?.city_uuid ?? contract?.city)
-  return cityCode ? `城市编码 ${cityCode}` : '地区未填写'
+  const city = clean(row?.city_str ?? row?.city_name)
+  if (city) return city
+  const code = clean(row?.key8 ?? row?.city_code ?? row?.city_id ?? row?.city_uuid ?? row?.city)
+  return code ? `城市编码 ${code}` : '地区未填写'
 }
-
-function getContractNumber(contract) {
-  return normalizeText(
-    contract?.contract_no ?? contract?.contract_number ?? contract?.contract_num ??
-    contract?.contract_code ?? contract?.number ?? contract?.code
-  ) || '—'
-}
-
 function getTaskStatus(task) {
-  const candidates = [
-    task?.task_status, task?.task_status_code, task?.status,
-    task?.task_status_str, task?.status_name, task?.task_status_name,
-    task?.task_status_int
-  ].filter(value => value !== undefined && value !== null)
-  for (const value of candidates) {
-    const text = normalizeText(value)
-    if (text === '5' || text.includes('待审核')) return 'pending'
-    if (text === '6' || text.includes('审核通过')) return 'approved'
+  for (const value of [task?.task_status_int, task?.task_status, task?.task_status_code, task?.status]) {
+    if (value === undefined || value === null || value === '') continue
+    const s = clean(value)
+    if (s === '5' || s.includes('待审核')) return 'pending'
+    if (s === '6' || s.includes('审核通过')) return 'approved'
+    if (s === '4' || s.includes('执行中')) return 'executing'
   }
   return 'other'
 }
 
-async function fetchFreshStatistics(date = new Date()) {
-  const { start, end, key } = getMonthRange(date)
-
-  // 合同列表：河南省、进行中合同，作为项目全集。
-  const contracts = await fetchAllPages(
-    page => `${BASE_URL}/admin/contract/index.html?${buildQuery({
-      page, key: '', key2: '', key3: 0, key5: '', key6: 1, key7: PROVINCE_CODE,
-      key8: '', key9: '', key10: '', project_leader: '', expireC: '', unexpireC: '',
-      id: '', uuid: '', start: '', end: '', contract_type: '', contract_wb_name: '',
-      sign_end_start: '', sign_end_end: '', project_leader_name: '', get_contract_id: ''
-    })}`
-  )
-
-  // 当月测试类型任务。header_name/header_uuid 不参与负责人归属判断。
-  const tasks = await fetchAllPages(
-    page => `${BASE_URL}/admin/task/index.html?${buildQuery({
-      page, key: start, key2: end, 'key3[]': 0, key4: '', key5: '', 'key5[]': 5,
-      key6: 0, key7: PROVINCE_CODE, key8: '', fire_g_uuid: '', fire_p_uuid: '',
-      fire_uuid: '', header_name: ''
-    })}`
-  )
-
-  const taskGroups = new Map()
-  tasks.forEach(task => {
-    const name = normalizeText(task?.contract_name)
-    if (!name) return
-    if (!taskGroups.has(name)) taskGroups.set(name, [])
-    taskGroups.get(name).push(task)
-  })
-
-  const projects = contracts
-    .filter(contract => getContractName(contract))
-    .map(contract => {
-      const name = getContractName(contract)
-      const projectTasks = taskGroups.get(name) || []
-      const completed = projectTasks.some(task => {
-        const status = getTaskStatus(task)
-        return status === 'pending' || status === 'approved'
-      })
-      return {
-        id: normalizeText(contract?.id ?? contract?.contract_id ?? contract?.uuid) || name,
-        name,
-        leader: normalizeText(contract?.project_leader_name) || '负责人未填写',
-        region: getRegion(contract),
-        contractNumber: getContractNumber(contract),
-        completed,
-        taskCount: projectTasks.length,
-        matchedTaskCount: projectTasks.filter(task => getTaskStatus(task) !== 'other').length
-      }
-    })
-
-  return {
-    month: key,
-    start,
-    end,
-    provinceCode: PROVINCE_CODE,
-    projects,
-    sourceCounts: { contracts: contracts.length, tasks: tasks.length }
+async function fetchFresh(date = new Date()) {
+  const { start, end, key } = monthRange(date)
+  const contracts = await fetchPages(page => `${BASE_URL}/admin/contract/index.html?${query({
+    page, key: '', key2: '', key3: 0, key5: '', key6: 1, key7: PROVINCE_CODE,
+    key8: '', key9: '', key10: '', project_leader: '', expireC: '', unexpireC: '',
+    id: '', uuid: '', start: '', end: '', contract_type: '', contract_wb_name: '',
+    sign_end_start: '', sign_end_end: '', project_leader_name: '', get_contract_id: ''
+  })}`)
+  // key3[]=0 不限制审核状态；key5[]=5 只取测试任务；key6=3 沿用后台任务列表的有效查询组合。
+  const tasks = await fetchPages(page => `${BASE_URL}/admin/task/index.html?${query({
+    page, key: start, key2: end, 'key3[]': 0, key4: '', 'key5[]': 5,
+    key6: 3, key7: PROVINCE_CODE, key8: '', fire_g_uuid: '', fire_p_uuid: '',
+    fire_uuid: '', header_name: ''
+  })}`)
+  const groups = new Map()
+  const statusCounts = { pending: 0, approved: 0, executing: 0, other: 0 }
+  for (const task of tasks) {
+    const status = getTaskStatus(task)
+    statusCounts[status] = (statusCounts[status] || 0) + 1
+    const name = projectKey(task?.contract_name)
+    if (!name) continue
+    if (!groups.has(name)) groups.set(name, [])
+    groups.get(name).push(task)
   }
+  let matchedTasks = 0
+  const projects = contracts.filter(c => getContractName(c)).map(contract => {
+    const name = getContractName(contract), matched = groups.get(projectKey(name)) || []
+    matchedTasks += matched.length
+    return {
+      id: clean(contract?.id ?? contract?.contract_id ?? contract?.uuid) || name,
+      name,
+      leader: clean(contract?.project_leader_name) || '负责人未填写',
+      region: getRegion(contract),
+      contractNumber: clean(contract?.contract_no ?? contract?.contract_number ?? contract?.contract_num ?? contract?.contract_code ?? contract?.number ?? contract?.code) || '—',
+      completed: matched.some(task => ['pending', 'approved'].includes(getTaskStatus(task))),
+      taskCount: matched.length
+    }
+  })
+  return { month: key, start, end, provinceCode: PROVINCE_CODE, projects,
+    sourceCounts: { contracts: contracts.length, tasks: tasks.length, matchedTasks }, statusCounts }
 }
 
-/** 只读取当前月份的本地缓存，不发起任何网络请求。 */
 export async function getCachedProjectTaskStatistics(date = new Date()) {
-  const { key } = getMonthRange(date)
-  return readMonthlyCache(key)
+  return readCache(monthRange(date).key)
 }
-
-/** 仅由用户主动点击刷新时调用；请求完成后写入当前月份缓存。 */
 export async function refreshProjectTaskStatistics(date = new Date()) {
-  const fresh = await fetchFreshStatistics(date)
-  const record = { ...fresh, refreshedAt: new Date().toISOString() }
+  const record = { ...await fetchFresh(date), refreshedAt: new Date().toISOString() }
   try {
-    await writeMonthlyCache(record)
+    await writeCache(record)
     return { ...record, cacheSaved: true, cacheError: '' }
   } catch (error) {
     console.error('统计数据已获取，但写入 IndexedDB 缓存失败：', error)
