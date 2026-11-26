@@ -21,7 +21,7 @@
           <span>已完成</span><strong>{{ currentSummary.completed }}</strong>
         </div>
         <div class="overview-item is-pending">
-          <span>未完成</span><strong>{{ currentSummary.uncompleted }}</strong>
+          <span>未完成</span><el-button text type="danger" class="overview-count" @click="showAllUncompleted">{{ currentSummary.uncompleted }}</el-button>
         </div>
       </div>
 
@@ -137,7 +137,7 @@ async function loadStats() {
   }
 }
 
-function showUncompleted(row) {
+function showAllUncompleted() {\n  detailProjects.value = projects.value.filter(project => !project.completed)\n  detailTitle.value = `全部未完成项目（${detailProjects.value.length}）`\n  detailVisible.value = true\n}\n\nfunction showUncompleted(row) {
   detailProjects.value = row.projects
   detailTitle.value = `${row.label} · 未完成项目（${row.uncompleted}）`
   detailVisible.value = true
@@ -169,7 +169,7 @@ onBeforeUnmount(() => {
 .overview-item{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#F3F5F8;border-radius:6px;color:#6A6374;font-size:13px}
 .overview-item strong{font-size:22px;color:#51495E;font-weight:650;font-variant-numeric:tabular-nums}
 .overview-item.is-completed{background:#F0F7F2}.overview-item.is-completed strong{color:#2E9E5B}
-.overview-item.is-pending{background:#FEF1F4}.overview-item.is-pending strong{color:#C65B7B}
+.overview-item.is-pending{background:#FEF1F4}.overview-item.is-pending strong,.overview-item.is-pending :deep(.overview-count){color:#C65B7B;font-size:22px;font-weight:650;font-variant-numeric:tabular-nums;padding:0;height:auto}
 .stats-tabs{margin-bottom:4px}
 .zero-value{color:#B6B1B7}
 .stats-footnote{display:flex;justify-content:space-between;gap:12px;margin-top:12px;color:#909399;font-size:12px;line-height:1.6}
