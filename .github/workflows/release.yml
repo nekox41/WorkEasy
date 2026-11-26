@@ -30,17 +30,17 @@ jobs:
       - name: Verify release asset
         run: |
           test -s dist/workeasy.user.js
-          node -e "const fs=require('fs'); const s=fs.readFileSync('dist/workeasy.user.js','utf8'); if(!/@version\\s+3\\.1\\.0/.test(s)) { console.error('Userscript version metadata does not match 3.1.0'); process.exit(1) }"
+          node -e "const fs=require('fs'); const s=fs.readFileSync('dist/workeasy.user.js','utf8'); if(!/@version\\s+3\\.1\\.0/.test(s)) { console.error('Userscript version metadata does not match 3.1.1'); process.exit(1) }"
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.1.0
-          name: WorkEasy v3.1.0
+          tag_name: v3.1.1
+          name: WorkEasy v3.1.1
           target_commitish: ${{ github.sha }}
           body: |
-            ## WorkEasy 3.1.0
+            ## WorkEasy 3.1.1
 
-            - 使用已验证的任务查询参数，完整分页并按合同名称匹配。
+            - 归属地筛选非空时，统计表优先显示输入的归属地关键词，保持原有统计分组和缓存。
             - 项目任务统计功能完成：独立刷新任务进度，复用本地项目缓存，分别显示更新时间。
             - 首页仅显示统计按钮，实际统计内容放入弹窗。
             - 移除汇总方式，支持地区、负责人及归属地模糊组合筛选。

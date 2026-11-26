@@ -121,9 +121,10 @@ const groupLabel = '地区 / 项目负责人'
 const groupRows = computed(() => {
   const groups = new Map()
   filteredProjects.value.forEach(project => {
-    const label = `${project.region} / ${project.leader}`
-    if (!groups.has(label)) groups.set(label, { label, total:0, completed:0, uncompleted:0, projects:[] })
-    const group = groups.get(label)
+    const label = `${agencySearch.value.trim() || project.region} / ${project.leader}`
+    const groupKey = JSON.stringify([project.region, project.leader])
+    if (!groups.has(groupKey)) groups.set(groupKey, { label, total:0, completed:0, uncompleted:0, projects:[] })
+    const group = groups.get(groupKey)
     group.total++
     group[project.completed ? 'completed' : 'uncompleted']++
     if (!project.completed) group.projects.push(project)

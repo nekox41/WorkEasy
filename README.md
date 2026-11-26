@@ -8,9 +8,11 @@ WorkEasy 是面向 `henan.xmf119.cn` 管理后台的 Tampermonkey / Violentmonke
 
 点击上面的链接即可打开油猴安装页面。后续版本会通过同一个链接自动获取最新版脚本。
 
-## 3.1.0
+## 3.1.1
 
 ### 项目任务统计（已完成）
+
+- 归属地筛选非空时，统计表及未完成明细标题优先显示输入的归属地关键词。
 
 - 首页仅增加「项目任务统计」按钮，点击后在弹窗面板中查看统计内容。
 - 地区、负责人下拉框及归属地 fire_agency 模糊搜索，组合实时筛选，无需选择汇总方式。
@@ -39,7 +41,7 @@ npm run build
 
 构建产物位于 `dist/`。GitHub Actions 会在相关源码更新时构建，并发布仅包含 `workeasy.user.js` 的 GitHub Release。
 
-- 用户脚本版本：`3.1.0`
+- 用户脚本版本：`3.1.1`
 - 目标站点：`*://*.xmf119.cn/*`
 - 构建入口：`src/main.js`
 - 最新安装链接：<https://github.com/nekox41/WorkEasy/releases/latest/download/workeasy.user.js>
