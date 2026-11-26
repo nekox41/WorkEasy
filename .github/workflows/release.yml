@@ -1,0 +1,49 @@
+name: Build and publish userscript release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/release.yml'
+      - 'src/**'
+      - 'vite.config.js'
+      - 'package.json'
+      - 'package-lock.json'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        run: npm install
+      - name: Build userscript
+        run: npm run build
+      - name: Verify release asset
+        run: |
+          test -s dist/workeasy.user.js
+          node -e "const fs=require('fs'); const s=fs.readFileSync('dist/workeasy.user.js','utf8'); if(!s.includes('@version 3.0.4')) process.exit(1)"
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v3.0.4
+          name: WorkEasy v3.0.4
+          target_commitish: ${{ github.sha }}
+          body: |
+            ## WorkEasy 3.0.4
+
+            - 项目任务统计改为 IndexedDB 本地缓存。
+            - 首页打开只读取本地当月缓存，不自动请求合同和任务接口。
+            - 仅用户手动点击刷新时才获取全量数据。
+            - 分页请求并发限制为 2；刷新失败保留旧数据。
+            - Release 仅包含可直接安装的油猴脚本。
+          files: dist/workeasy.user.js
+          fail_on_unmatched_files: true
