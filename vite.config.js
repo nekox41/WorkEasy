@@ -5,6 +5,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const latestScript = 'https://github.com/nekox41/WorkEasy/releases/latest/download/workeasy.user.js'
 
 export default defineConfig({
   plugins: [
@@ -17,12 +18,12 @@ export default defineConfig({
         namespace: 'npm/vite-plugin-monkey',
         match: ['*://*.xmf119.cn/*'],
         connect: ['gitee.com'],
-        description: '一键检查任务、退回与审核通过、报告填写、计划着色及一键新建下发',
-        version: '3.0.3',
+        description: '一键检查任务、项目任务统计（本地缓存/手动刷新）、报告填写及计划管理',
+        version: '3.0.4',
         author: 'aameow',
         'run-at': 'document-end',
-        updateURL: 'https://gitee.com/nekox41/work-easy/raw/main/dist/workeasy.user.js',
-        downloadURL: 'https://gitee.com/nekox41/work-easy/raw/main/dist/workeasy.user.txt'
+        updateURL: latestScript,
+        downloadURL: latestScript
       },
       build: {
         externalGlobals: {
