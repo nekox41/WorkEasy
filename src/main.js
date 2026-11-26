@@ -1,70 +1,55 @@
-// main.js
 import { createApp } from 'vue'
-import Welcome from './components/Index/Welcome.vue';
-import Table from './components/Index/Table.vue';
-import FloatingButton from './components/Index/FloatingButton.vue'; // 新增浮动按钮组件
-import Task from './components/Task/Task.vue';
-import OpenReport from './components/Report/OpenReport.vue';
-import PlanListStyle from './components/Plan/PlanListStyle.vue';
-import GenerateReport from './components/Report/GenerateReport.vue';
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
-import DefaultSelected from './components/Plan/DefaultSelected.vue';
+import './styles/theme.css'
 
-const url = document.URL;
+import Table from './components/Index/Table.vue'
+import Task from './components/Task/Task.vue'
+import GenerateReport from './components/Report/GenerateReport.vue'
+import PlanListStyle from './components/Plan/PlanListStyle.vue'
 
-function mountVueComponent(Component, targetElement, appId = 'app') {
-    if (!targetElement) return null;
+const url = document.URL
 
-    const container = document.createElement('div');
-    container.id = appId;
-    targetElement.appendChild(container);
-
-    const app = createApp(Component);
-    // 应用插件
-    app.use(ElementPlus);
-
-    app.mount(`#${appId}`)
-    return app;
+function mountVueComponent(Component, targetElement, appId) {
+  if (!targetElement) return null
+  const container = document.createElement('div')
+  if (appId) container.id = appId
+  targetElement.appendChild(container)
+  const app = createApp(Component)
+  app.use(ElementPlus)
+  app.mount(container)
+  return app
 }
 
-// 检测网址
-if (document.URL.includes("/admin/index/indexpage.html")) {
-    // 欢迎弹窗
-    const welcomeApp = mountVueComponent(Welcome, document.body);
-
-    // 添加浮动按钮 - 直接添加到body，但使用不同的app ID避免冲突
-    mountVueComponent(FloatingButton, document.body, 'floating-button-app');
+// 首页看板
+if (url.includes('/admin/index/indexpage.html')) {
+  mountVueComponent(Table, document.querySelector('body > div.example-wrap > div'))
 }
 
-// 任务页面
-if (document.URL.includes("/admin/task/taskInfo")) {
-    // 展示任务信息
-    mountVueComponent(Task, document.body)
-}
-
-// 报告页面
-if (document.URL.includes("/admin/reportmiddleware")) {
-    const reportFormArea = document.querySelector("body > div.wrapper.wrapper-content.animated.fadeInRight > div > div.ibox-content > div.row > div:nth-child(1) > form > div:nth-child(6)");
-    if (reportFormArea) {
-        mountVueComponent(OpenReport, reportFormArea);
-    } else {
-        console.error("无法找到报告表单容器")
+// 任务详情
+if (url.includes('/admin/task/taskInfo')) {
+  const target = document.querySelector('#taskAudit > div:nth-child(21)')
+  if (target) {
+    const label = target.querySelector('label')
+    if (label) {
+      label.className = 'col-sm-4 control-label'
+      label.textContent = '助手功能：'
     }
-}
-
-// 计划列表的样式优化
-if (document.URL.includes("/admin/contractplan/planlist")) {
-    mountVueComponent(PlanListStyle, document.body);
-}
-
-// 下发任务
-if (document.URL.includes("/admin/contractplan/contractplandetail")) {
-    mountVueComponent(DefaultSelected, document.body);
+    mountVueComponent(Task, target, 'app')
+  }
 }
 
 // 报告生成
-if (document.URL.includes("/admin/report/index")) {
-    const target = document.querySelector("[name=admin_list_sea]");
-    mountVueComponent(GenerateReport, target);
+if (url.includes('/admin/report/index.html')) {
+  const searchButton = document.querySelector('body > div.wrapper.wrapper-content.animated.fadeInRight > div > div.ibox-content > div.row > div > form > div.col-sm-2 > span > button')
+  if (searchButton?.parentNode) {
+    const target = document.createElement('div')
+    searchButton.parentNode.insertBefore(target, searchButton.nextSibling)
+    mountVueComponent(GenerateReport, target)
+  }
+}
+
+// 计划列表
+if (url.includes('/admin/contractplan/planlist')) {
+  mountVueComponent(PlanListStyle, document.body)
 }
