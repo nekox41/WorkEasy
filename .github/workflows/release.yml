@@ -30,15 +30,18 @@ jobs:
       - name: Verify release asset
         run: |
           test -s dist/workeasy.user.js
-          node -e "const fs=require('fs'); const s=fs.readFileSync('dist/workeasy.user.js','utf8'); if(!/@version\\s+3\\.2\\.0/.test(s)) { console.error('Userscript version metadata does not match 3.2.0'); process.exit(1) }"
+          node -e "const fs=require('fs'); const s=fs.readFileSync('dist/workeasy.user.js','utf8'); if(!/@version\\s+3\\.2\\.1/.test(s)) { console.error('Userscript version metadata does not match 3.2.1'); process.exit(1) }"
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.2.0
-          name: WorkEasy v3.2.0
+          tag_name: v3.2.1
+          name: WorkEasy v3.2.1
           target_commitish: ${{ github.sha }}
           body: |
-            ## WorkEasy 3.2.0
+            ## WorkEasy 3.2.1
+
+- 附件按原顺序统一流式排列；图片完整显示不裁切，视频可直接播放，其他文件提供打开按钮。
+- 移除重复图片区域，修正附件分组展示问题。
 
             - 任务面板集成维保要求匹配及所有类型现场附件展示。
             - 新增查看详情二级弹窗，列出当前筛选下所有项目的完成状态、匹配任务及审核状态。

@@ -10,7 +10,10 @@ function absoluteUrl(value, base) {
     try { return new URL(value, base).href; } catch { return value || ''; }
 }
 function isImageUrl(value) {
-    return /\.(png|jpe?g|gif|webp|bmp|svg)(?:[?#]|$)/i.test(value || '');
+    return /\.(png|jpe?g|gif|webp|bmp|svg|avif|heic)(?:[?#]|$)/i.test(value || '');
+}
+function isVideoUrl(value) {
+    return /\.(mp4|webm|ogg|mov|m4v|mkv)(?:[?#]|$)/i.test(value || '');
 }
 async function getAttachments(url) {
     if (!url) return [];
@@ -24,7 +27,7 @@ async function getAttachments(url) {
             if (!href || href.startsWith('javascript:') || href === url || seen.has(href)) return;
             const image = anchor.querySelector('img');
             const name = (anchor.getAttribute('download') || anchor.getAttribute('title') || anchor.textContent || image?.alt || href.split('/').pop()?.split('?')[0] || '附件').trim();
-            files.push({ url: href, name, isImage: isImageUrl(href) || Boolean(image) });
+            files.push({ url: href, name, isImage: isImageUrl(href) || Boolean(image), isVideo: !image && isVideoUrl(href) });
             seen.add(href);
         });
         doc.querySelectorAll('img[src]').forEach(img => {
@@ -34,12 +37,12 @@ async function getAttachments(url) {
             seen.add(src);
         });
         if (!files.length && !/^text\/html/i.test(res.headers?.['content-type'] || '')) {
-            return [{ url, name: url.split('/').pop()?.split('?')[0] || '附件', isImage: isImageUrl(url) }];
+            return [{ url, name: url.split('/').pop()?.split('?')[0] || '附件', isImage: isImageUrl(url), isVideo: isVideoUrl(url) }];
         }
         return files;
     } catch (err) {
         console.error(`获取附件失败 (${url}):`, err);
-        return [{ url, name: url.split('/').pop()?.split('?')[0] || '附件', isImage: isImageUrl(url) }];
+        return [{ url, name: url.split('/').pop()?.split('?')[0] || '附件', isImage: isImageUrl(url), isVideo: isVideoUrl(url) }];
     }
 }
 async function getTaskDetails(url) {

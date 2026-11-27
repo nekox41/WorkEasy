@@ -20,17 +20,18 @@
         <div class="section-heading"><b>现场附件</b><el-tag size="small" effect="plain">{{ allAttachments.length }} 个文件</el-tag></div>
         <div class="attachment-grid">
           <template v-for="(attachment,index) in allAttachments" :key="attachment.url + index">
-            <el-image v-if="attachment.isImage" :src="attachment.url" :preview-src-list="imageUrls" :initial-index="imageUrls.indexOf(attachment.url)" fit="cover" class="image-item" show-progress />
+            <el-image v-if="attachment.isImage" :src="attachment.url" :preview-src-list="imageUrls" :initial-index="imageUrls.indexOf(attachment.url)" fit="contain" class="attachment-image" />
+            <video v-else-if="attachment.isVideo" class="attachment-video" controls preload="metadata">
+              <source :src="attachment.url" />
+              当前浏览器不支持播放此视频
+            </video>
             <a v-else class="attachment-file" :href="attachment.url" target="_blank" rel="noopener noreferrer">
               <el-icon><Document /></el-icon><span>{{ attachment.name || '打开附件' }}</span><el-icon><TopRight /></el-icon>
             </a>
           </template>
         </div>
       </section>
-      <el-divider v-if="processedImages.length" />
-      <div class="test-images">
-        <el-image v-for="(image,index) in processedImages" :key="index" :src="image" :zoom-rate="1.2" :max-scale="7" :min-scale="0.2" :preview-src-list="processedImages" :initial-index="index" fit="cover" class="image-item" show-progress />
-      </div>
+
     </div>
     <template #footer>
       <div class="dialog-footer">
@@ -97,13 +98,16 @@ onUnmounted(()=>document.removeEventListener('keydown',handleKeyDown))
 .dialog-content :deep(b){font-size:16px;color:#51495E}
 .header-left{display:flex;flex-direction:row;align-items:flex-end}
 #subtitle{margin-left:10px}
-.image-item{width:22.5%;min-width:110px;height:120px;margin:3px;border-radius:6px}
+.attachment-grid{display:flex;flex-wrap:wrap;align-items:flex-start;gap:12px}
+.attachment-image,.attachment-video{display:block;width:calc(25% - 9px);min-width:180px;max-width:100%;height:auto;margin:0;border-radius:6px;overflow:hidden}
+.attachment-image :deep(.el-image__inner){display:block;width:100%;height:auto;object-fit:contain}
+.attachment-video{max-height:280px;background:#111}
+
 .requirement-card{padding:14px 16px;background:#F0F8F3;border:1px solid #D6EBDD;border-radius:8px}
 .section-heading{display:flex;align-items:center;gap:10px;margin-bottom:10px;color:#51495E}
 .section-heading>span{font-size:12px;color:#909399}
 .requirement-text{white-space:pre-wrap;line-height:1.8;color:#3F4A43;font-size:14px}
 .attachment-section{margin:10px 0}
-.attachment-grid{display:flex;flex-wrap:wrap;gap:8px}
 .attachment-file{display:flex;align-items:center;gap:8px;max-width:260px;padding:10px 12px;border:1px solid #E5E7EB;border-radius:7px;color:#52627A;text-decoration:none;background:#FAFBFC}
 .attachment-file span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .attachment-file:hover{border-color:#A8C6EA;color:#409EFF}
