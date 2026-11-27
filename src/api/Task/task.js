@@ -15,8 +15,27 @@ function isImageUrl(value) {
 function isVideoUrl(value) {
     return /\.(mp4|webm|ogg|mov|m4v|mkv)(?:[?#]|$)/i.test(value || '');
 }
+// form_basic.html 是系统的附件预览/中转页面，不是附件文件本身。
+// 该页面可能要求额外操作权限，不能作为普通附件展示。
+function isAttachmentViewerUrl(value, base) {
+    try {
+        const parsed = new URL(value, base);
+        return /(?:^|\/)form_basic\.html$/i.test(parsed.pathname);
+    } catch {
+        return /(?:^|\/)form_basic\.html(?:[?#]|$)/i.test(value || '');
+    }
+}
+function isSameDocumentUrl(value, base) {
+    try {
+        const a = new URL(value, base);
+        const b = new URL(base);
+        return a.origin === b.origin && a.pathname === b.pathname && a.search === b.search;
+    } catch {
+        return value === base;
+    }
+}
 async function getAttachments(url) {
-    if (!url) return [];
+    if (!url || isAttachmentViewerUrl(url)) return [];
     try {
         const res = await axios.get(url);
         const parser = new DOMParser();
@@ -24,7 +43,8 @@ async function getAttachments(url) {
         const files = [], seen = new Set();
         doc.querySelectorAll('a[href]').forEach(anchor => {
             const href = absoluteUrl(anchor.getAttribute('href'), url);
-            if (!href || href.startsWith('javascript:') || href === url || seen.has(href)) return;
+            if (!href || href.startsWith('javascript:') || href.startsWith('#') ||
+                isAttachmentViewerUrl(href, url) || isSameDocumentUrl(href, url) || seen.has(href)) return;
             const image = anchor.querySelector('img');
             const name = (anchor.getAttribute('download') || anchor.getAttribute('title') || anchor.textContent || image?.alt || href.split('/').pop()?.split('?')[0] || '附件').trim();
             files.push({ url: href, name, isImage: isImageUrl(href) || Boolean(image), isVideo: !image && isVideoUrl(href) });
@@ -33,6 +53,7 @@ async function getAttachments(url) {
         doc.querySelectorAll('img[src]').forEach(img => {
             const src = absoluteUrl(img.getAttribute('src'), url);
             if (!src || seen.has(src)) return;
+            if (isAttachmentViewerUrl(src, url)) return;
             files.push({ url: src, name: (img.alt || src.split('/').pop()?.split('?')[0] || '图片附件').trim(), isImage: true });
             seen.add(src);
         });
@@ -42,6 +63,8 @@ async function getAttachments(url) {
         return files;
     } catch (err) {
         console.error(`获取附件失败 (${url}):`, err);
+        // 预览中转页即使请求失败也不应退化成一个“附件文件”按钮。
+        if (isAttachmentViewerUrl(url)) return [];
         return [{ url, name: url.split('/').pop()?.split('?')[0] || '附件', isImage: isImageUrl(url), isVideo: isVideoUrl(url) }];
     }
 }

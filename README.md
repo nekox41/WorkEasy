@@ -8,6 +8,12 @@ WorkEasy 是面向 `henan.xmf119.cn` 管理后台的 Tampermonkey / Violentmonke
 
 点击上面的链接即可打开油猴安装页面。后续版本会通过同一个链接自动获取最新版脚本。
 
+## 3.2.2
+
+- 修复附件解析将系统预览中转页 `form_basic.html` 错误显示为附件按钮的问题。
+- 过滤指向预览页自身的链接；即使预览页请求失败，也不再回退显示该页面。
+- 保留预览页中真正的图片、视频及其他文件资源，避免误删正常附件。
+
 ## 3.2.1
 
 - 调整任务附件展示：图片和视频按附件原始顺序从左到右、从上到下统一排列；图片完整显示不裁切，视频支持直接播放；其他文件显示打开附件按钮。
@@ -58,7 +64,7 @@ npm run build
 
 构建产物位于 `dist/`。GitHub Actions 会在相关源码更新时构建，并发布仅包含 `workeasy.user.js` 的 GitHub Release。
 
-- 用户脚本版本：`3.2.1`
+- 用户脚本版本：`3.2.2`
 - 目标站点：`*://*.xmf119.cn/*`
 - 构建入口：`src/main.js`
 - 最新安装链接：<https://github.com/nekox41/WorkEasy/releases/latest/download/workeasy.user.js>

@@ -30,16 +30,18 @@ jobs:
       - name: Verify release asset
         run: |
           test -s dist/workeasy.user.js
-          node -e "const fs=require('fs'); const s=fs.readFileSync('dist/workeasy.user.js','utf8'); if(!/@version\\s+3\\.2\\.1/.test(s)) { console.error('Userscript version metadata does not match 3.2.1'); process.exit(1) }"
+          node -e "const fs=require('fs'); const s=fs.readFileSync('dist/workeasy.user.js','utf8'); if(!/@version\\s+3\\.2\\.2/.test(s)) { console.error('Userscript version metadata does not match 3.2.2'); process.exit(1) }"
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.2.1
-          name: WorkEasy v3.2.1
+          tag_name: v3.2.2
+          name: WorkEasy v3.2.2
           target_commitish: ${{ github.sha }}
           body: |
-            ## WorkEasy 3.2.1
+            ## WorkEasy 3.2.2
 
+            - 修复附件解析将系统预览中转页 form_basic.html 错误显示为附件按钮的问题。
+            - 过滤预览页自身链接及失败回退，保留其中真正的图片、视频和其他文件资源。
             - 附件按原顺序统一流式排列；图片完整显示不裁切，视频可直接播放，其他文件提供打开按钮。
             - 移除重复图片区域，修正附件分组展示问题。
 
