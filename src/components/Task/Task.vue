@@ -27,7 +27,8 @@
 import { onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import Panel from './Panel.vue'
-import { getImages, getTaskDetails } from '../../api/Task/task'
+import { getAttachments, getTaskDetails } from '../../api/Task/task'
+import { findMaintenanceRequirement } from '../../api/Task/maintenanceRequirements'
 import { getTaskList, getProjectByContractID } from '../../api/utils'
 
 const dataList = ref([])
@@ -42,7 +43,7 @@ const currentProgress = ref(1)
 const elapsedTime = ref(0)
 let timerInterval = null
 let keydownHandler = null
-const emptyPanelData = { system:'', item:'', content:'', start:'', end:'', time:'', images:[], type:'', remark:'' }
+const emptyPanelData = { system:'', item:'', content:'', start:'', end:'', time:'', images:[], attachments:[], type:'', remark:'', requirement:'' }
 
 async function getBaseData() {
   const form = document.querySelector('#taskAudit')
@@ -57,13 +58,13 @@ async function getBaseData() {
   const links = [form.querySelector('div:nth-child(20) > a')?.href, form.querySelector('div:nth-child(19) > a')?.href]
   const sign = form.querySelector('div:nth-child(24) > div > a > img')?.src
   const [operatorImages, controllerImages] = await Promise.all([
-    links[0] ? getImages(links[0]) : Promise.resolve([]),
-    links[1] ? getImages(links[1]) : Promise.resolve([])
+    links[0] ? getAttachments(links[0]) : Promise.resolve([]),
+    links[1] ? getAttachments(links[1]) : Promise.resolve([])
   ])
   dataList.value.push(
-    { system:'基本信息', item:'操作员自拍', content:form.querySelector('div:nth-child(18) input')?.value || '', start:startValue, end:endValue, time, images:operatorImages, type:'基本信息' },
-    { system:'基本信息', item:'控制器照片', content:form.querySelector('div:nth-child(19) input')?.value || '', start:startValue, end:endValue, time, images:controllerImages, type:'基本信息' },
-    { system:'基本信息', item:'签到照片', content:'签到照片', start:startValue, end:endValue, time, images:sign ? [sign] : [], type:'基本信息' }
+    { system:'基本信息', item:'操作员自拍', content:form.querySelector('div:nth-child(18) input')?.value || '', start:startValue, end:endValue, time, images:operatorImages.filter(file => file.isImage).map(file => file.url), attachments:operatorImages, type:'基本信息' },
+    { system:'基本信息', item:'控制器照片', content:form.querySelector('div:nth-child(19) input')?.value || '', start:startValue, end:endValue, time, images:controllerImages.filter(file => file.isImage).map(file => file.url), attachments:controllerImages, type:'基本信息' },
+    { system:'基本信息', item:'签到照片', content:'签到照片', start:startValue, end:endValue, time, images:[], attachments:sign ? await getAttachments(sign) : [], type:'基本信息' }
   )
 }
 async function loadAllData() {
@@ -80,7 +81,7 @@ async function loadAllData() {
         progressPercent.value = pageData.value.length ? Number((completed / pageData.value.length * 100).toFixed(2)) : 100
       }
     }))
-    dataList.value.push(...results.flat())
+    dataList.value.push(...results.flat().map(item => ({ ...item, requirement: findMaintenanceRequirement(item.system, item.item) })))
     totalItem.value = dataList.value.length
     isDataLoaded.value = true
   } catch (error) {

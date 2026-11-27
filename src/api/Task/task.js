@@ -6,60 +6,71 @@ import axios from 'axios';
  * @returns {Promise<Array>} 返回包含任务详情的数组，每个元素包含images的Promise
  * @description 从指定URL获取任务详情，解析HTML内容并提取相关信息
  */
+function absoluteUrl(value, base) {
+    try { return new URL(value, base).href; } catch { return value || ''; }
+}
+function isImageUrl(value) {
+    return /\\.(png|jpe?g|gif|webp|bmp|svg)(?:[?#]|$)/i.test(value || '');
+}
+async function getAttachments(url) {
+    if (!url) return [];
+    try {
+        const res = await axios.get(url);
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(res.data, 'text/html');
+        const files = [], seen = new Set();
+        doc.querySelectorAll('a[href]').forEach(anchor => {
+            const href = absoluteUrl(anchor.getAttribute('href'), url);
+            if (!href || href.startsWith('javascript:') || href === url || seen.has(href)) return;
+            const image = anchor.querySelector('img');
+            const name = (anchor.getAttribute('download') || anchor.getAttribute('title') || anchor.textContent || image?.alt || href.split('/').pop()?.split('?')[0] || '附件').trim();
+            files.push({ url: href, name, isImage: isImageUrl(href) || Boolean(image) });
+            seen.add(href);
+        });
+        doc.querySelectorAll('img[src]').forEach(img => {
+            const src = absoluteUrl(img.getAttribute('src'), url);
+            if (!src || seen.has(src)) return;
+            files.push({ url: src, name: (img.alt || src.split('/').pop()?.split('?')[0] || '图片附件').trim(), isImage: true });
+            seen.add(src);
+        });
+        if (!files.length && !/^text\\/html/i.test(res.headers?.['content-type'] || '')) {
+            return [{ url, name: url.split('/').pop()?.split('?')[0] || '附件', isImage: isImageUrl(url) }];
+        }
+        return files;
+    } catch (err) {
+        console.error(`获取附件失败 (${url}):`, err);
+        return [{ url, name: url.split('/').pop()?.split('?')[0] || '附件', isImage: isImageUrl(url) }];
+    }
+}
 async function getTaskDetails(url) {
     try {
         const res = await axios.get(url);
         const parser = new DOMParser();
         const doc = parser.parseFromString(res.data, 'text/html');
-        
-        // 使用Promise.all等待所有图片数据获取完成
-        const taskDetails = await Promise.all(
-            Array.from(doc.querySelectorAll(".long-td")).map(async (line) => {
-                let imageRes = [];
-                if (line.children[10].firstElementChild === null) {
-                    imageRes = [];
-                } else {
-                    imageRes = await getImages(line.children[10].firstElementChild.href);
-                }
-                return {
-                    system: line.children[1].textContent,
-                    item: line.children[2].textContent,
-                    content: line.children[4].innerHTML,
-                    type: line.children[5].textContent,
-                    start: line.children[6].textContent,
-                    end: line.children[7].textContent,
-                    time: line.children[8].textContent,
-                    images: imageRes,
-                    remark: line.children[9].innerHTML
-                };
-            })
-        );
-        
-        return taskDetails;
+        return await Promise.all(Array.from(doc.querySelectorAll('.long-td')).map(async line => {
+            const attachmentLink = line.children[10]?.querySelector('a')?.href || '';
+            const attachments = await getAttachments(attachmentLink);
+            return {
+                system: line.children[1]?.textContent?.trim() || '',
+                item: line.children[2]?.textContent?.trim() || '',
+                content: line.children[4]?.innerHTML || '',
+                type: line.children[5]?.textContent?.trim() || '',
+                start: line.children[6]?.textContent?.trim() || '',
+                end: line.children[7]?.textContent?.trim() || '',
+                time: line.children[8]?.textContent?.trim() || '',
+                images: attachments.filter(file => file.isImage).map(file => file.url),
+                attachments,
+                remark: line.children[9]?.innerHTML || ''
+            };
+        }));
     } catch (err) {
         console.error('获取任务详情失败:', err);
         return [];
     }
 }
-
-/**
- * 获取图片列表
- * @param {string} url - 包含图片的页面URL
- * @returns {Promise<Array<string>>} 返回图片URL数组
- * @description 从指定URL获取页面内所有图片的源地址
- */
 async function getImages(url) {
-    try {
-        const res = await axios.get(url);
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(res.data, 'text/html');
-        return Array.from(doc.querySelectorAll("img")).map(img => img.src);
-    } catch (err) {
-        console.error(`获取图片失败 (${url}):`, err);
-        return [];
-    }
+    return (await getAttachments(url)).filter(file => file.isImage).map(file => file.url);
 }
-
 
 /**
  * 解析任务列表页面HTML，返回任务及基本信息
@@ -188,6 +199,7 @@ function ParseTaskDetail(html) {
 export {
     getTaskDetails,
     getImages,
+    getAttachments,
     ParseTaskPage,
     ParseTaskDetail
 };

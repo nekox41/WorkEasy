@@ -11,6 +11,23 @@
       </div>
       <el-divider />
       <div v-if="remark"><b>备注：</b><span class="test-remark" v-html="remark"></span><el-divider /></div>
+      <section v-if="requirement" class="requirement-card">
+        <div class="section-heading"><el-tag type="success" effect="plain">维保检测要求</el-tag><span>来自内置维保要求资料</span></div>
+        <div class="requirement-text">{{ requirement }}</div>
+      </section>
+      <el-divider v-if="allAttachments.length" />
+      <section v-if="allAttachments.length" class="attachment-section">
+        <div class="section-heading"><b>现场附件</b><el-tag size="small" effect="plain">{{ allAttachments.length }} 个文件</el-tag></div>
+        <div class="attachment-grid">
+          <template v-for="(attachment,index) in allAttachments" :key="attachment.url + index">
+            <el-image v-if="attachment.isImage" :src="attachment.url" :preview-src-list="imageUrls" :initial-index="imageUrls.indexOf(attachment.url)" fit="cover" class="image-item" show-progress />
+            <a v-else class="attachment-file" :href="attachment.url" target="_blank" rel="noopener noreferrer">
+              <el-icon><Document /></el-icon><span>{{ attachment.name || '打开附件' }}</span><el-icon><TopRight /></el-icon>
+            </a>
+          </template>
+        </div>
+      </section>
+      <el-divider v-if="processedImages.length" />
       <div class="test-images">
         <el-image v-for="(image,index) in processedImages" :key="index" :src="image" :zoom-rate="1.2" :max-scale="7" :min-scale="0.2" :preview-src-list="processedImages" :initial-index="index" fit="cover" class="image-item" show-progress />
       </div>
@@ -27,13 +44,14 @@
 <script setup>
 import { computed, h, onMounted, onUnmounted } from 'vue'
 import { ElNotification } from 'element-plus'
+import { Document, TopRight } from '@element-plus/icons-vue'
 import { getWaterInfo } from '../../api/utils'
 import { replaceUrl } from '../../api/util/sourceHelper'
 
 const props = defineProps({
   system:{type:String,default:''}, item:{type:String,default:''}, content:{type:String,default:''},
   start:{type:String,default:''}, end:{type:String,default:''}, time:{type:String,default:''},
-  images:{type:Array,default:()=>[]}, totalItem:{type:Number,default:0}, currentProgress:{type:Number,default:1},
+  images:{type:Array,default:()=>[]}, attachments:{type:Array,default:()=>[]}, requirement:{type:String,default:''}, totalItem:{type:Number,default:0}, currentProgress:{type:Number,default:1},
   remark:{type:String,default:''}, type:{type:String,default:''}
 })
 const dialogVisible = defineModel('dialogVisible',{type:Boolean,default:false})
@@ -53,6 +71,8 @@ const statusStyle = computed(()=>{
   return color ? {'--el-tag-bg-color':color,'--el-tag-border-color':color,'--el-tag-text-color':'#fff',backgroundColor:color,borderColor:color,color:'#fff',fontSize:'16px',fontWeight:'bold'} : {fontSize:'16px'}
 })
 const processedImages = computed(()=>props.images.map(replaceUrl))
+const allAttachments = computed(()=>[...props.attachments.map(item=>({...item,url:replaceUrl(item.url)})),...processedImages.value.map(url=>({url,name:url.split('/').pop()?.split('?')[0] || '图片附件',isImage:true}))].filter((item,index,array)=>item.url && array.findIndex(other=>other.url===item.url)===index))
+const imageUrls = computed(()=>allAttachments.value.filter(item=>item.isImage).map(item=>item.url))
 async function showWaterInfo() {
   const name = document.querySelector('#taskAudit > div:nth-child(6) > div > input')?.value || ''
   const list = await getWaterInfo(name)
@@ -77,7 +97,16 @@ onUnmounted(()=>document.removeEventListener('keydown',handleKeyDown))
 .dialog-content :deep(b){font-size:16px;color:#51495E}
 .header-left{display:flex;flex-direction:row;align-items:flex-end}
 #subtitle{margin-left:10px}
-.image-item{width:22.5%;margin:3px}
+.image-item{width:22.5%;min-width:110px;height:120px;margin:3px;border-radius:6px}
+.requirement-card{padding:14px 16px;background:#F0F8F3;border:1px solid #D6EBDD;border-radius:8px}
+.section-heading{display:flex;align-items:center;gap:10px;margin-bottom:10px;color:#51495E}
+.section-heading>span{font-size:12px;color:#909399}
+.requirement-text{white-space:pre-wrap;line-height:1.8;color:#3F4A43;font-size:14px}
+.attachment-section{margin:10px 0}
+.attachment-grid{display:flex;flex-wrap:wrap;gap:8px}
+.attachment-file{display:flex;align-items:center;gap:8px;max-width:260px;padding:10px 12px;border:1px solid #E5E7EB;border-radius:7px;color:#52627A;text-decoration:none;background:#FAFBFC}
+.attachment-file span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.attachment-file:hover{border-color:#A8C6EA;color:#409EFF}
 .dialog-footer{display:flex;align-items:center;justify-content:space-between;width:100%}
 .el-progress{flex-grow:1;margin-right:12px}
 .button-group{display:flex;gap:8px}
