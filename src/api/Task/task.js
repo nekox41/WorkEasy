@@ -10,7 +10,7 @@ function absoluteUrl(value, base) {
     try { return new URL(value, base).href; } catch { return value || ''; }
 }
 function isImageUrl(value) {
-    return /\\.(png|jpe?g|gif|webp|bmp|svg)(?:[?#]|$)/i.test(value || '');
+    return /\.(png|jpe?g|gif|webp|bmp|svg)(?:[?#]|$)/i.test(value || '');
 }
 async function getAttachments(url) {
     if (!url) return [];
@@ -33,7 +33,7 @@ async function getAttachments(url) {
             files.push({ url: src, name: (img.alt || src.split('/').pop()?.split('?')[0] || '图片附件').trim(), isImage: true });
             seen.add(src);
         });
-        if (!files.length && !/^text\\/html/i.test(res.headers?.['content-type'] || '')) {
+        if (!files.length && !/^text\/html/i.test(res.headers?.['content-type'] || '')) {
             return [{ url, name: url.split('/').pop()?.split('?')[0] || '附件', isImage: isImageUrl(url) }];
         }
         return files;

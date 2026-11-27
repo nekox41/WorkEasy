@@ -1,5 +1,5 @@
 import requirements from './maintenanceRequirements.json'
-const normalize = value => String(value || '').normalize('NFKC').toLowerCase().replace(/[\\s，。；;、:：()（）【】\\[\\]_.-]+/g, '')
+const normalize = value => String(value || '').normalize('NFKC').toLowerCase().replace(/[\s，。；;、:：()（）【】\[\]_.-]+/g, '')
 const entries = Object.entries(requirements).flatMap(([systemName, devices]) =>
   Object.entries(devices).flatMap(([deviceName, checks]) =>
     Object.entries(checks).map(([itemName, detail]) => ({
